@@ -1,0 +1,142 @@
+/* 定義全局顏色變量，方便以後一鍵換色 */
+:root {
+    --primary-green: #00ff88;    /* 螢光綠：科技感核心 */
+    --dark-bg: #0f172a;         /* 深藍黑：背景色 */
+    --card-bg: rgba(255, 255, 255, 0.05); /* 半透明玻璃質感 */
+    --text-main: #f8fafc;       /* 主文字顏色 */
+    --text-dim: #94a3b8;        /* 次要文字顏色 */
+    --accent-glow: rgba(0, 255, 136, 0.3); /* 霓虹發光效果 */
+}
+
+/* 基礎設定 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+    background-color: var(--dark-bg);
+    color: var(--text-main);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* 導覽列風格 */
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 5%;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(10px); /* 磨砂玻璃效果 */
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-green);
+    letter-spacing: 2px;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 2rem;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: var(--text-main);
+    font-weight: 500;
+    transition: 0.3s;
+}
+
+.nav-links a:hover {
+    color: var(--primary-green);
+    text-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* 主視覺區域 (Hero Section) */
+.hero {
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 0 10%;
+    background: radial-gradient(circle at center, rgba(0, 255, 136, 0.1) 0%, transparent 70%);
+}
+
+.hero h1 {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+    color: #ffffff;
+    background: linear-gradient(to right, #ffffff, var(--primary-green));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero p {
+    font-size: 1.2rem;
+    color: var(--text-dim);
+    max-width: 600px;
+    margin-bottom: 2rem;
+}
+
+/* 科技感按鈕 */
+.btn-primary {
+    background: var(--primary-green);
+    color: var(--dark-bg);
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: 0.3s;
+    box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0 35px var(--primary-green);
+}
+
+/* 功能卡片區 (Features) */
+.features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    padding: 5rem 10%;
+}
+
+.card {
+    background: var(--card-bg);
+    padding: 2.5rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: 0.4s;
+}
+
+.card:hover {
+    border-color: var(--primary-green);
+    background: rgba(0, 255, 136, 0.05);
+    transform: scale(1.02);
+}
+
+.card h3 {
+    color: var(--primary-green);
+    margin-bottom: 1rem;
+}
+
+/* 手機版適配 */
+@media (max-width: 768px) {
+    .hero h1 { font-size: 2.5rem; }
+    .nav-links { display: none; } /* 手機版通常會縮排成漢堡選單，這裡先簡化 */
+}
