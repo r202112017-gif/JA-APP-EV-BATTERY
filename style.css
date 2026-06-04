@@ -116,12 +116,20 @@ nav {
     padding: 5rem 10%;
 }
 
+.notes {
+    padding: 0 10% 5rem;
+}
+
 .card {
     background: var(--card-bg);
     padding: 2.5rem;
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     transition: 0.4s;
+}
+
+.card.full-width {
+    max-width: 100%;
 }
 
 .card:hover {
