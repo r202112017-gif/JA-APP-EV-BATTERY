@@ -310,6 +310,189 @@ app.post('/api-proxy', async (req, res) => {
   }
 });
 
+// --- Battery Analysis Endpoint ---
+app.post('/api/analyze-battery', proxyLimiter, async (req, res) => {
+  try {
+    const { carModel, originalCapacity, currentCapacity, manufactureYear, mileage, healthScore } = req.body;
+    if (!carModel || originalCapacity === undefined || currentCapacity === undefined) {
+      return res.status(400).json({ error: 'Missing required battery data' });
+    }
+
+    const accessToken = await getAccessToken(res);
+    if (!accessToken) return;
+
+    const batteryContext = `
+車型: ${carModel}
+原始容量: ${originalCapacity} kWh
+目前可用容量: ${currentCapacity} kWh
+製造年份: ${manufactureYear}
+行駛里程: ${mileage} km
+健康指數: ${healthScore || 'N/A'}
+`;
+
+    const prompt = `You are an expert EV battery diagnostician. Analyze the following battery data and provide:
+1. Root cause analysis for current health status
+2. Predictive maintenance schedule
+3. Remaining useful life estimation
+4. Risk factors and mitigation strategies
+5. Specific recommendations for this vehicle model
+
+Battery Data:
+${batteryContext}
+
+Provide structured analysis with actionable insights.`;
+
+    const apiUrl = `https://aiplatform.clients6.google.com/v1/projects/${GOOGLE_CLOUD_PROJECT}/locations/${GOOGLE_CLOUD_LOCATION}/publishers/google/models/gemini-1.5-flash:generateContent`;
+    const requestBody = {
+      contents: [{
+        role: 'user',
+        parts: [{ text: prompt }]
+      }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 1024,
+      }
+    };
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: getRequestHeaders(accessToken),
+      body: JSON.stringify(requestBody)
+    });
+
+    const data = await response.json();
+    if (response.ok && data.candidates && data.candidates[0]) {
+      const analysis = data.candidates[0].content.parts[0].text;
+      res.json({ success: true, analysis });
+    } else {
+      res.status(response.status).json({ error: 'AI analysis failed', details: data });
+    }
+  } catch (error) {
+    console.error('[Battery Analysis] Error:', error);
+    res.status(500).json({ error: 'Battery analysis error', message: error.message });
+  }
+});
+
+// --- AI Chat Endpoint ---
+app.post('/api/chat', proxyLimiter, async (req, res) => {
+  try {
+    const { message, conversationHistory = [] } = req.body;
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    const accessToken = await getAccessToken(res);
+    if (!accessToken) return;
+
+    // Build conversation history for context
+    const contents = [
+      ...conversationHistory.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      })),
+      {
+        role: 'user',
+        parts: [{ text: message }]
+      }
+    ];
+
+    const systemInstruction = `You are EV-RE, an expert AI assistant specializing in electric vehicle battery diagnostics and maintenance. You provide accurate, helpful information about:
+- Battery health assessment
+- Charging optimization
+- Maintenance scheduling
+- Battery longevity improvement
+- OBD-II data interpretation
+- Cost-benefit analysis for battery replacement
+
+Always be factual, include disclaimers where necessary, and recommend professional inspection for critical issues. Respond in the user's language (Chinese or English).`;
+
+    const apiUrl = `https://aiplatform.clients6.google.com/v1/projects/${GOOGLE_CLOUD_PROJECT}/locations/${GOOGLE_CLOUD_LOCATION}/publishers/google/models/gemini-1.5-flash:streamGenerateContent`;
+    const requestBody = {
+      contents,
+      systemInstruction: {
+        role: 'user',
+        parts: [{ text: systemInstruction }]
+      },
+      generationConfig: {
+        temperature: 0.8,
+        maxOutputTokens: 512,
+      }
+    };
+
+    // Set headers for SSE streaming
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Transfer-Encoding': 'chunked',
+    });
+
+    const stream = await fetch(apiUrl, {
+      method: 'POST',
+      headers: getRequestHeaders(accessToken),
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!stream.body) {
+      res.end(JSON.stringify({ error: 'No response body' }));
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    stream.body.on('data', (chunk) => {
+      if (res.writableEnded) return;
+      try {
+        buffer += decoder.decode(chunk, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('{')) {
+            try {
+              const json = JSON.parse(line);
+              if (json.candidates && json.candidates[0] && json.candidates[0].content.parts[0]) {
+                const text = json.candidates[0].content.parts[0].text;
+                res.write(`data: ${JSON.stringify({ text })}\n\n`);
+              }
+            } catch (e) {
+              // Silently ignore JSON parsing errors in stream
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[Chat] Stream processing error:', error);
+      }
+    });
+
+    stream.body.on('end', () => {
+      if (!res.writableEnded) {
+        res.write('data: {"done": true}\n\n');
+        res.end();
+      }
+    });
+
+    stream.body.on('error', (error) => {
+      console.error('[Chat] Stream error:', error);
+      if (!res.writableEnded) {
+        res.end();
+      }
+    });
+
+    res.on('close', () => {
+      if (stream.body && typeof stream.body.destroy === 'function') {
+        stream.body.destroy();
+      }
+    });
+  } catch (error) {
+    console.error('[Chat] Error:', error);
+    if (!res.writableEnded) {
+      res.status(500).json({ error: 'Chat error', message: error.message });
+    }
+  }
+});
+
 const server = app.listen(PORT, API_BACKEND_HOST, () => {
   console.log(`Vertex AI Backend listening at http://localhost:${PORT}`);
 });

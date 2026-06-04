@@ -64,7 +64,10 @@
                         <input type="number" id="mileage" min="0" max="999999" step="100" placeholder="例如：85000" required>
                     </label>
                 </div>
-                <button type="submit" class="btn-primary">開始診斷</button>
+                <div class="button-group">
+                    <button type="submit" class="btn-primary">開始診斷</button>
+                    <button type="button" id="analyzeWithAI" class="btn-secondary" style="display: none;">AI 深度分析</button>
+                </div>
             </form>
             <div id="diagnosisResult" class="result-card hidden">
                 <h3 id="resultTitle"></h3>
@@ -72,8 +75,27 @@
                 <ul id="resultList"></ul>
                 <p class="small-note">提示：此工具為初步估算，若需精準診斷建議配合專業電池檢測設備。</p>
             </div>
+            <div id="aiAnalysisResult" class="ai-analysis-card hidden">
+                <h3>🤖 AI 深度分析</h3>
+                <div id="aiAnalysisContent" class="ai-content"></div>
+                <p class="small-note">AI 分析基於 Vertex AI 提供，建議結合專業意見使用。</p>
+            </div>
         </div>
     </section>
+
+    <!-- AI Chat Widget -->
+    <div id="chatWidget" class="chat-widget">
+        <div class="chat-header">
+            <h3>EV-RE AI 助手</h3>
+            <button id="chatToggle" class="chat-close-btn" aria-label="關閉聊天">✕</button>
+        </div>
+        <div id="chatMessages" class="chat-messages"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="輸入您的問題..." />
+            <button id="chatSend" class="chat-send-btn" aria-label="發送">→</button>
+        </div>
+    </div>
+    <button id="chatToggleBtn" class="chat-toggle-btn" title="開啟 AI 助手">💬 AI 助手</button>
 
     <script>
         function clamp(value, min, max) {
@@ -140,6 +162,8 @@
             document.getElementById('diagnosisResult').classList.remove('hidden');
         }
 
+        let lastBatteryData = null;
+
         document.getElementById('batteryForm').addEventListener('submit', function (event) {
             event.preventDefault();
             const carModel = document.getElementById('carModel').value.trim() || '您的車輛';
@@ -155,7 +179,143 @@
 
             const result = estimateBatteryHealth({ originalCapacity, currentCapacity, manufactureYear, mileage });
             renderResult(result, carModel, originalCapacity, currentCapacity, manufactureYear, mileage);
+            
+            document.getElementById('analyzeWithAI').style.display = 'inline-block';
+            lastBatteryData = { carModel, originalCapacity, currentCapacity, manufactureYear, mileage, healthScore: result.healthScore };
         });
+
+        // AI Deep Analysis
+        document.getElementById('analyzeWithAI').addEventListener('click', async function() {
+            if (!lastBatteryData) return;
+            
+            const analysisCard = document.getElementById('aiAnalysisResult');
+            const analysisContent = document.getElementById('aiAnalysisContent');
+            
+            analysisCard.classList.remove('hidden');
+            analysisContent.innerHTML = '<p class=\"loading-text\">⏳ AI 正在分析中...</p>';
+            
+            try {
+                const response = await fetch('/api/analyze-battery', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(lastBatteryData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                if (data.success) {
+                    const analysis = data.analysis.replace(/\n/g, '<br>');
+                    analysisContent.innerHTML = `<p>${analysis}</p>`;
+                } else {
+                    analysisContent.innerHTML = '<p style=\"color: #ff6b6b;\">AI 分析失敗，請稍後重試。</p>';
+                }
+            } catch (error) {
+                console.error('AI analysis error:', error);
+                analysisContent.innerHTML = '<p style=\"color: #ff6b6b;\">連線錯誤：' + error.message + '</p>';
+            }
+        });
+
+        // Chat Widget
+        let conversationHistory = [];
+        const chatWidget = document.getElementById('chatWidget');
+        const chatToggle = document.getElementById('chatToggle');
+        const chatToggleBtn = document.getElementById('chatToggleBtn');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const chatSend = document.getElementById('chatSend');
+
+        chatToggleBtn.addEventListener('click', () => {
+            chatWidget.classList.add('active');
+            chatToggleBtn.style.display = 'none';
+            chatInput.focus();
+        });
+
+        chatToggle.addEventListener('click', () => {
+            chatWidget.classList.remove('active');
+            chatToggleBtn.style.display = 'block';
+        });
+
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            chatMessages.innerHTML += `<div class=\"message user-message\"><p>${escapeHtml(message)}</p></div>`;
+            conversationHistory.push({ role: 'user', content: message });
+            chatInput.value = '';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const loadingMsg = document.createElement('div');
+            loadingMsg.className = 'message ai-message';
+            loadingMsg.innerHTML = '<p class=\"typing-indicator\">●●●</p>';
+            chatMessages.appendChild(loadingMsg);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, conversationHistory })
+                });
+
+                if (!response.body) throw new Error('No response body');
+
+                loadingMsg.remove();
+                const aiMsg = document.createElement('div');
+                aiMsg.className = 'message ai-message';
+                let fullText = '';
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const json = JSON.parse(line.substring(6));
+                                if (json.done) break;
+                                if (json.text) {
+                                    fullText += json.text;
+                                    aiMsg.innerHTML = `<p>${escapeHtml(fullText)}</p>`;
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+
+                if (aiMsg.parentNode) {
+                    chatMessages.appendChild(aiMsg);
+                    conversationHistory.push({ role: 'assistant', content: fullText });
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+            } catch (error) {
+                loadingMsg.remove();
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'message ai-message error';
+                errorMsg.innerHTML = `<p>❌ 錯誤：${escapeHtml(error.message)}</p>`;
+                chatMessages.appendChild(errorMsg);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        chatSend.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        function escapeHtml(text) {
+            const el = document.createElement('div');
+            el.textContent = text;
+            return el.innerHTML;
+        }
     </script>
 </body>
 </html>
