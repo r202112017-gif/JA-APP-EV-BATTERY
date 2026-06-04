@@ -26,15 +26,480 @@
         <div class="card">
             <h3>CO₂ 減碳紀錄</h3>
             <p>連接車輛系統記錄每次行駛節省的碳排放，幫您量化綠色貢獻。</p>
+            <button id="co2TrackerBtn" class="btn-small">查看減碳紀錄</button>
         </div>
         <div class="card">
             <h3>QR 碼打卡</h3>
             <p>在指定充電站與回收站掃描 QR 碼，快速獲得積分並完成打卡。</p>
+            <button id="qrScannerBtn" class="btn-small">開啟掃描器</button>
         </div>
         <div class="card">
             <h3>積分兌換</h3>
             <p>將累積積分兌換成折扣、合作商店優惠或綠色獎勵。</p>
+            <button id="rewardsBtn" class="btn-small">查看兌換商城</button>
         </div>
     </section>
-</body>
-</html>
+
+    <!-- Points Dashboard -->
+    <section class="points-dashboard">
+        <div class="card full-width">
+            <h2>積分儀表板</h2>
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">🌱</div>
+                    <div class="stat-info">
+                        <h3>累積積分</h3>
+                        <p id="totalPointsDisplay">0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🌍</div>
+                    <div class="stat-info">
+                        <h3>減碳量</h3>
+                        <p id="totalCO2Display">0 kg</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⚡</div>
+                    <div class="stat-info">
+                        <h3>充電次數</h3>
+                        <p id="chargingCountDisplay">0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">♻️</div>
+                    <div class="stat-info">
+                        <h3>回收活動</h3>
+                        <p id="recyclingCountDisplay">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CO2 Tracker Modal -->
+    <div id="co2TrackerModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🌍 CO₂ 減碳紀錄</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="co2-summary">
+                    <div class="summary-card">
+                        <h3>本月減碳</h3>
+                        <p id="monthCO2" class="big-number">0 kg</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>年度減碳</h3>
+                        <p id="yearCO2" class="big-number">0 kg</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>相當於</h3>
+                        <p id="treesEquivalent" class="big-number">0 棵樹</p>
+                    </div>
+                </div>
+                <div class="co2-chart">
+                    <h3>最近 7 天減碳紀錄</h3>
+                    <div id="co2ChartContainer" class="chart-container"></div>
+                </div>
+                <div class="co2-actions">
+                    <button id="logDrivingBtn" class="btn-primary">記錄新行駛</button>
+                    <button id="exportCO2Btn" class="btn-secondary">📊 導出數據</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Scanner Modal -->
+    <div id="qrScannerModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📱 QR 碼掃描</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="qr-scanner-area">
+                    <div id="scanner-container" class="scanner-placeholder">
+                        <p>📹 掃描區域</p>
+                        <p style="font-size: 0.9rem; color: var(--text-dim);">點擊「開始掃描」啟動攝像頭</p>
+                    </div>
+                </div>
+                <div class="scanner-controls">
+                    <button id="startCameraBtn" class="btn-primary">📷 開始掃描</button>
+                    <button id="manualQRBtn" class="btn-secondary">✏️ 手動輸入</button>
+                    <button id="stopCameraBtn" class="btn-danger hidden">⏹ 停止</button>
+                </div>
+                <div id="scanResultArea" class="result-area hidden">
+                    <h3>掃描結果</h3>
+                    <p id="scanResult"></p>
+                    <div id="checkInReward" class="reward-display"></div>
+                    <button id="confirmCheckInBtn" class="btn-primary">確認打卡</button>
+                </div>
+                <div id="manualQRForm" class="manual-form hidden">
+                    <input type="text" id="manualQRCode" placeholder="輸入 QR 碼內容..." />
+                    <button id="submitManualQRBtn" class="btn-primary">提交</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rewards Shop Modal -->
+    <div id="rewardsModal" class="modal hidden">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2>🎁 積分兌換商城</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="rewards-filter">
+                    <button class="filter-btn active" data-category="all">全部</button>
+                    <button class="filter-btn" data-category="discount">折扣券</button>
+                    <button class="filter-btn" data-category="voucher">消費券</button>
+                    <button class="filter-btn" data-category="eco">環保物品</button>
+                </div>
+                <div id="rewardsGrid" class="rewards-grid">
+                    <!-- Rewards will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <section class="recent-activity">
+        <div class="card full-width">
+            <h2>最近活動</h2>
+            <div id="activityList" class="activity-list"></div>
+        </div>
+    </section>
+
+    <script>
+        // Points System Manager
+        class PointsSystem {
+            constructor() {
+                this.points = JSON.parse(localStorage.getItem('userPoints')) || {
+                    total: 0,
+                    co2: 0,
+                    chargingCount: 0,
+                    recyclingCount: 0,
+                    activities: [],
+                    co2History: this.initializeCO2History()
+                };
+                this.rewardsList = this.initializeRewards();
+                this.init();
+            }
+
+            init() {
+                this.updateDashboard();
+                this.setupEventListeners();
+            }
+
+            initializeCO2History() {
+                const history = [];
+                for (let i = 6; i >= 0; i--) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - i);
+                    history.push({
+                        date: date.toISOString().split('T')[0],
+                        co2: Math.random() * 20
+                    });
+                }
+                return history;
+            }
+
+            initializeRewards() {
+                return [
+                    { id: 1, name: '充電站 9 折券', category: 'discount', cost: 500, description: '享受充電服務 9 折優惠' },
+                    { id: 2, name: '便利店消費券', category: 'voucher', cost: 300, description: '合作便利店 300 元消費券' },
+                    { id: 3, name: '環保手提袋', category: 'eco', cost: 200, description: '品牌環保購物袋' },
+                    { id: 4, name: '停車場折扣', category: 'discount', cost: 400, description: '指定停車場 8 折' },
+                    { id: 5, name: '咖啡店代金券', category: 'voucher', cost: 250, description: '知名咖啡連鎖店代金券' },
+                    { id: 6, name: '環保水樽', category: 'eco', cost: 350, description: 'EV-RE 品牌不鏽鋼水樽' },
+                    { id: 7, name: '加油站折扣', category: 'discount', cost: 600, description: '加油/充電服務 8 折' },
+                    { id: 8, name: '商場購物券', category: 'voucher', cost: 800, description: '指定商場 800 元購物券' }
+                ];
+            }
+
+            addPoints(amount, type, description) {
+                this.points.total += amount;
+                this.points.activities.unshift({
+                    type,
+                    amount,
+                    description,
+                    timestamp: new Date().toLocaleString('zh-HK')
+                });
+                if (this.points.activities.length > 50) {
+                    this.points.activities.pop();
+                }
+                this.save();
+                this.updateDashboard();
+            }
+
+            updateDashboard() {
+                document.getElementById('totalPointsDisplay').textContent = this.points.total;
+                document.getElementById('totalCO2Display').textContent = (this.points.co2 / 1000).toFixed(2) + ' 噸';
+                document.getElementById('chargingCountDisplay').textContent = this.points.chargingCount;
+                document.getElementById('recyclingCountDisplay').textContent = this.points.recyclingCount;
+            }
+
+            save() {
+                localStorage.setItem('userPoints', JSON.stringify(this.points));
+            }
+
+            setupEventListeners() {
+                // Modal toggles
+                document.getElementById('co2TrackerBtn').addEventListener('click', () => this.openCO2Tracker());
+                document.getElementById('qrScannerBtn').addEventListener('click', () => this.openQRScanner());
+                document.getElementById('rewardsBtn').addEventListener('click', () => this.openRewards());
+
+                // Modal close buttons
+                document.querySelectorAll('.close-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.target.closest('.modal').classList.add('hidden');
+                        this.stopCamera();
+                    });
+                });
+
+                // CO2 Tracker
+                document.getElementById('logDrivingBtn').addEventListener('click', () => this.logDriving());
+                document.getElementById('exportCO2Btn').addEventListener('click', () => this.exportCO2Data());
+
+                // QR Scanner
+                document.getElementById('startCameraBtn').addEventListener('click', () => this.startCamera());
+                document.getElementById('manualQRBtn').addEventListener('click', () => this.toggleManualQR());
+                document.getElementById('stopCameraBtn').addEventListener('click', () => this.stopCamera());
+                document.getElementById('submitManualQRBtn').addEventListener('click', () => this.processQRCode());
+                document.getElementById('confirmCheckInBtn').addEventListener('click', () => this.confirmCheckIn());
+
+                // Rewards Filter
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.filterRewards(e.target.dataset.category));
+                });
+
+                // Activity list
+                this.updateActivityList();
+            }
+
+            // CO2 Tracker Functions
+            openCO2Tracker() {
+                const modal = document.getElementById('co2TrackerModal');
+                modal.classList.remove('hidden');
+                this.updateCO2Display();
+            }
+
+            updateCO2Display() {
+                const monthCO2 = this.points.co2History.reduce((sum, d) => sum + d.co2, 0);
+                document.getElementById('monthCO2').textContent = monthCO2.toFixed(2) + ' kg';
+                document.getElementById('yearCO2').textContent = (this.points.co2 / 1000).toFixed(2) + ' 噸';
+                document.getElementById('treesEquivalent').textContent = Math.floor(this.points.co2 / 20) + ' 棵樹';
+
+                // Render chart
+                const chartContainer = document.getElementById('co2ChartContainer');
+                chartContainer.innerHTML = this.points.co2History.map(d => `
+                    <div class="chart-bar" style="height: ${Math.max(d.co2 / 30 * 100, 5)}%;" title="${d.date}: ${d.co2.toFixed(2)} kg"></div>
+                `).join('');
+            }
+
+            logDriving() {
+                const co2Saved = Math.random() * 30 + 5; // 5-35 kg CO2
+                this.points.co2 += co2Saved;
+                
+                const today = new Date().toISOString().split('T')[0];
+                const todayRecord = this.points.co2History.find(d => d.date === today);
+                if (todayRecord) {
+                    todayRecord.co2 += co2Saved;
+                } else {
+                    this.points.co2History.push({ date: today, co2: co2Saved });
+                }
+
+                const pointsGained = Math.floor(co2Saved);
+                this.addPoints(pointsGained, 'driving', `記錄行駛，節省 ${co2Saved.toFixed(2)} kg CO₂`);
+                this.updateCO2Display();
+                alert(`✅ 成功記錄！節省 ${co2Saved.toFixed(2)} kg CO₂，獲得 ${pointsGained} 積分`);
+            }
+
+            exportCO2Data() {
+                const data = `CO2 減碳記錄\n\n本月減碳: ${this.points.co2History.reduce((sum, d) => sum + d.co2, 0).toFixed(2)} kg\n年度減碳: ${(this.points.co2 / 1000).toFixed(2)} 噸\n\n詳細記錄:\n` +
+                    this.points.co2History.map(d => `${d.date}: ${d.co2.toFixed(2)} kg`).join('\n');
+                const blob = new Blob([data], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'CO2_Record.txt';
+                a.click();
+            }
+
+            // QR Scanner Functions
+            openQRScanner() {
+                const modal = document.getElementById('qrScannerModal');
+                modal.classList.remove('hidden');
+            }
+
+            startCamera() {
+                document.getElementById('startCameraBtn').classList.add('hidden');
+                document.getElementById('stopCameraBtn').classList.remove('hidden');
+                
+                const container = document.getElementById('scanner-container');
+                container.textContent = '📹 正在啟動攝像頭...';
+                
+                // Simulate QR code detection
+                setTimeout(() => {
+                    container.textContent = '📹 攝像頭運行中 (模擬模式)';
+                    
+                    // Auto-detect simulated QR code after 2 seconds
+                    setTimeout(() => {
+                        this.simulateQRDetection();
+                    }, 2000);
+                }, 1000);
+            }
+
+            simulateQRDetection() {
+                const stations = [
+                    { id: 'CHARGE_01', name: '中環充電站', points: 50, type: 'charging' },
+                    { id: 'CHARGE_02', name: '灣仔快充站', points: 100, type: 'charging' },
+                    { id: 'RECYCLE_01', name: '中環回收站', points: 75, type: 'recycling' },
+                    { id: 'RECYCLE_02', name: '銅鑼灣環保點', points: 60, type: 'recycling' }
+                ];
+                
+                const station = stations[Math.floor(Math.random() * stations.length)];
+                this.displayQRResult(station);
+            }
+
+            toggleManualQR() {
+                document.getElementById('manualQRForm').classList.toggle('hidden');
+                if (!document.getElementById('manualQRForm').classList.contains('hidden')) {
+                    document.getElementById('manualQRCode').focus();
+                }
+            }
+
+            processQRCode() {
+                const code = document.getElementById('manualQRCode').value.trim();
+                if (!code) {
+                    alert('請輸入 QR 碼內容');
+                    return;
+                }
+
+                // Simulate QR code processing
+                const stations = [
+                    { id: 'CHARGE_01', name: '中環充電站', points: 50, type: 'charging' },
+                    { id: 'CHARGE_02', name: '灣仔快充站', points: 100, type: 'charging' },
+                    { id: 'RECYCLE_01', name: '中環回收站', points: 75, type: 'recycling' },
+                    { id: 'RECYCLE_02', name: '銅鑼灣環保點', points: 60, type: 'recycling' }
+                ];
+                
+                const station = stations.find(s => s.id === code) || stations[Math.floor(Math.random() * stations.length)];
+                this.displayQRResult(station);
+                document.getElementById('manualQRForm').classList.add('hidden');
+            }
+
+            displayQRResult(station) {
+                document.getElementById('scanResult').textContent = `✅ 已掃描: ${station.name}`;
+                document.getElementById('checkInReward').innerHTML = `
+                    <div class="reward-info">
+                        <p style="margin: 0 0 0.5rem 0;">獲得 ${station.points} 積分</p>
+                        <p style="margin: 0; font-size: 0.9rem; color: var(--text-dim);">類型: ${station.type === 'charging' ? '⚡ 充電站' : '♻️ 回收站'}</p>
+                    </div>
+                `;
+                document.getElementById('scanResultArea').classList.remove('hidden');
+                document.getElementById('startCameraBtn').classList.remove('hidden');
+                document.getElementById('stopCameraBtn').classList.add('hidden');
+                
+                this.currentStation = station;
+            }
+
+            confirmCheckIn() {
+                if (!this.currentStation) return;
+                
+                const station = this.currentStation;
+                if (station.type === 'charging') {
+                    this.points.chargingCount++;
+                } else {
+                    this.points.recyclingCount++;
+                }
+                
+                this.addPoints(station.points, station.type, `在 ${station.name} 打卡`);
+                alert(`✅ 打卡成功！已獲得 ${station.points} 積分`);
+                
+                document.getElementById('qrScannerModal').classList.add('hidden');
+                document.getElementById('scanResultArea').classList.add('hidden');
+                this.updateActivityList();
+            }
+
+            stopCamera() {
+                document.getElementById('startCameraBtn').classList.remove('hidden');
+                document.getElementById('stopCameraBtn').classList.add('hidden');
+                document.getElementById('scanner-container').textContent = '📹 掃描區域\n點擊「開始掃描」啟動攝像頭';
+            }
+
+            // Rewards Functions
+            openRewards() {
+                const modal = document.getElementById('rewardsModal');
+                modal.classList.remove('hidden');
+                this.renderRewards('all');
+            }
+
+            filterRewards(category) {
+                document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                event.target.classList.add('active');
+                this.renderRewards(category);
+            }
+
+            renderRewards(category) {
+                const filtered = category === 'all' 
+                    ? this.rewardsList 
+                    : this.rewardsList.filter(r => r.category === category);
+                
+                const html = filtered.map(reward => `
+                    <div class="reward-card">
+                        <h3>${reward.name}</h3>
+                        <p>${reward.description}</p>
+                        <div class="reward-cost">
+                            <span class="cost-value">${reward.cost}</span>
+                            <span class="cost-label">積分</span>
+                        </div>
+                        <button class="btn-small" onclick="pointsSystem.redeemReward(${reward.id})">
+                            ${this.points.total >= reward.cost ? '兌換' : '積分不足'}
+                        </button>
+                    </div>
+                `).join('');
+                
+                document.getElementById('rewardsGrid').innerHTML = html;
+            }
+
+            redeemReward(id) {
+                const reward = this.rewardsList.find(r => r.id === id);
+                if (!reward) return;
+                
+                if (this.points.total < reward.cost) {
+                    alert('❌ 積分不足');
+                    return;
+                }
+                
+                this.points.total -= reward.cost;
+                this.addPoints(-reward.cost, 'redemption', `兌換: ${reward.name}`);
+                this.renderRewards('all');
+                alert(`✅ 兌換成功！已兌換 ${reward.name}`);
+            }
+
+            updateActivityList() {
+                const list = document.getElementById('activityList');
+                if (this.points.activities.length === 0) {
+                    list.innerHTML = '<p style="text-align: center; color: var(--text-dim);">暫無活動記錄</p>';
+                    return;
+                }
+                
+                list.innerHTML = this.points.activities.slice(0, 10).map(activity => `
+                    <div class="activity-item">
+                        <span class="activity-type">${activity.type}</span>
+                        <span class="activity-desc">${activity.description}</span>
+                        <span class="activity-amount ${activity.amount > 0 ? 'positive' : 'negative'}">
+                            ${activity.amount > 0 ? '+' : ''}${activity.amount}
+                        </span>
+                        <span class="activity-time">${activity.timestamp}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        const pointsSystem = new PointsSystem();
+    </script>
