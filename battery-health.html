@@ -36,5 +36,126 @@
             <p>結合歷史數據與最新電池演算法，判斷電池殘值與最佳保養方案。</p>
         </div>
     </section>
+
+    <section class="tool">
+        <div class="card full-width">
+            <h2>電池健康診斷工具</h2>
+            <p>使用以下簡易估算器，快速檢視電池狀態與保養建議。</p>
+            <form id="batteryForm">
+                <div class="form-grid">
+                    <label class="form-group">
+                        <span>車型</span>
+                        <input type="text" id="carModel" placeholder="例如：Tesla Model 3" required>
+                    </label>
+                    <label class="form-group">
+                        <span>電池原始容量 (kWh)</span>
+                        <input type="number" id="originalCapacity" min="20" max="200" step="0.1" placeholder="例如：75" required>
+                    </label>
+                    <label class="form-group">
+                        <span>目前可用容量 (kWh)</span>
+                        <input type="number" id="currentCapacity" min="10" max="200" step="0.1" placeholder="例如：68" required>
+                    </label>
+                    <label class="form-group">
+                        <span>製造年份</span>
+                        <input type="number" id="manufactureYear" min="2000" max="2026" step="1" placeholder="例如：2019" required>
+                    </label>
+                    <label class="form-group">
+                        <span>總行駛里程 (km)</span>
+                        <input type="number" id="mileage" min="0" max="999999" step="100" placeholder="例如：85000" required>
+                    </label>
+                </div>
+                <button type="submit" class="btn-primary">開始診斷</button>
+            </form>
+            <div id="diagnosisResult" class="result-card hidden">
+                <h3 id="resultTitle"></h3>
+                <p id="resultSummary"></p>
+                <ul id="resultList"></ul>
+                <p class="small-note">提示：此工具為初步估算，若需精準診斷建議配合專業電池檢測設備。</p>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        function clamp(value, min, max) {
+            return Math.min(Math.max(value, min), max);
+        }
+
+        function formatNumber(value) {
+            return Number(value).toLocaleString('zh-HK');
+        }
+
+        function estimateBatteryHealth({ originalCapacity, currentCapacity, manufactureYear, mileage }) {
+            const currentYear = new Date().getFullYear();
+            const age = clamp(currentYear - manufactureYear, 0, 20);
+            const capacityRatio = clamp(currentCapacity / originalCapacity, 0, 1);
+            const ageScore = clamp(1 - age / 12, 0, 1);
+            const mileageScore = clamp(1 - mileage / 200000, 0, 1);
+            const healthScore = Math.round((capacityRatio * 55) + (ageScore * 25) + (mileageScore * 20));
+
+            let status = '良好';
+            let recommendation = '電池整體狀態穩定，建議定期維護並持續觀察充電表現。';
+            let lifePrediction = '預期 4 - 6 年內仍有良好使用壽命。';
+
+            if (healthScore >= 80) {
+                status = '優良';
+                recommendation = '電池狀況良好，請維持正常充放電習慣並避免極端溫度。';
+                lifePrediction = '預期 5 年以上仍可維持良好效能。';
+            } else if (healthScore >= 60) {
+                status = '中等';
+                recommendation = '建議避免長期高功率快速充電並每 6 個月檢查一次電池模組。';
+                lifePrediction = '預期 3 - 5 年內需關注電池退化。';
+            } else if (healthScore >= 40) {
+                status = '偏弱';
+                recommendation = '建議安排專業電池檢測，評估是否需要更換老化模組。';
+                lifePrediction = '預期 2 - 4 年內可能出現明顯衰退。';
+            } else {
+                status = '嚴重退化';
+                recommendation = '請儘速聯繫專業維修，評估電池重整或更換方案。';
+                lifePrediction = '建議立即進行進階檢測。';
+            }
+
+            return {
+                healthScore,
+                status,
+                recommendation,
+                lifePrediction,
+                age,
+                capacityRatio,
+                mileageScore,
+            };
+        }
+
+        function renderResult(data, carModel, originalCapacity, currentCapacity, manufactureYear, mileage) {
+            const title = document.getElementById('resultTitle');
+            const summary = document.getElementById('resultSummary');
+            const list = document.getElementById('resultList');
+            title.textContent = `${carModel} 電池健康指數：${data.healthScore} / 100 (${data.status})`;
+            summary.textContent = `製造年份：${manufactureYear}，行駛里程：${formatNumber(mileage)} km，原始容量：${originalCapacity} kWh，目前可用容量：${currentCapacity} kWh。`;
+            list.innerHTML = `
+                <li>容量維持率：${Math.round(data.capacityRatio * 100)}%</li>
+                <li>電池年齡估算：${data.age} 年</li>
+                <li>壽命預測：${data.lifePrediction}</li>
+                <li>建議：${data.recommendation}</li>
+            `;
+            document.getElementById('diagnosisResult').classList.remove('hidden');
+        }
+
+        document.getElementById('batteryForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const carModel = document.getElementById('carModel').value.trim() || '您的車輛';
+            const originalCapacity = Number(document.getElementById('originalCapacity').value);
+            const currentCapacity = Number(document.getElementById('currentCapacity').value);
+            const manufactureYear = Number(document.getElementById('manufactureYear').value);
+            const mileage = Number(document.getElementById('mileage').value);
+
+            if (currentCapacity > originalCapacity) {
+                alert('目前可用容量不得大於電池原始容量。');
+                return;
+            }
+
+            const result = estimateBatteryHealth({ originalCapacity, currentCapacity, manufactureYear, mileage });
+            renderResult(result, carModel, originalCapacity, currentCapacity, manufactureYear, mileage);
+        });
+    </script>
 </body>
 </html>
