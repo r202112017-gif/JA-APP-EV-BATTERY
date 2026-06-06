@@ -658,48 +658,65 @@
             lastBatteryData = { carModel, originalCapacity, currentCapacity, manufactureYear, mileage, healthScore: result.healthScore };
         });
 
- document.getElementById('analyzeWithAI').addEventListener('click', async function() {
-    // 1. 安全檢查：如果未有電池數據就直接返回
-    if (!lastBatteryData) return;
+ // ✅ 關鍵：加入這行，確保網頁所有 HTML 元件（包括按鈕）都準備好後才執行
+document.addEventListener('DOMContentLoaded', function() {
     
-    const analysisCard = document.getElementById('aiAnalysisResult');
-    const analysisContent = document.getElementById('aiAnalysisContent');
+    // 綁定 AI 分析按鈕的點擊事件
+    const aiButton = document.getElementById('analyzeWithAI');
     
-    // 顯示分析卡片並呈現 Loading 狀態
-    analysisCard.classList.remove('hidden');
-    analysisContent.innerHTML = '<p class="loading-text">⏳ EV-Master 正在分析電池數據中...</p>';
-    
-    try {
-        // 🛠️ 關鍵修改一：網址改成 Netlify Functions 嘅相對路徑
-        const response = await fetch('/.netlify/functions/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            // 🛠️ 關鍵修改二：配對返我哋後端 chat.js 預期要收到嘅 history 同 message 格式
-            // 我哋將電池數據轉成文字，當作 message 射過去
-            body: JSON.stringify({
-                history: [], // 一鍵生成報告不需要之前的對話歷史，留空陣列即可
-                message: `請根據以下這份電動車電池的實時監測數據，進行深度健康度(SOH)診斷與保養建議報告：\n${JSON.stringify(lastBatteryData, null, 2)}`
-            })
+    if (aiButton) {
+        aiButton.addEventListener('click', async function() {
+            // 📢 測謊機 1：如果順利綁定，撳粒掣 Console 一定會印出呢行！
+            console.log("👉 [EV-Master] 偵測到按鈕點擊！"); 
+
+            if (!lastBatteryData) {
+                // 📢 測謊機 2：幫你檢查係咪卡喺數據問題
+                console.log("⚠️ [EV-Master] 失敗：因為 lastBatteryData 係空嘅，程式直接 return！");
+                alert("請先點擊『生成模擬電池數據』，擁有數據後才能進行 AI 診斷！");
+                return;
+            }
+            
+            const analysisCard = document.getElementById('aiAnalysisResult');
+            const analysisContent = document.getElementById('aiAnalysisContent');
+            
+            if (analysisCard && analysisContent) {
+                analysisCard.classList.remove('hidden');
+                analysisContent.innerHTML = '<p class="loading-text">⏳ EV-Master 正在分析數據中，請稍候...</p>';
+            }
+            
+            try {
+                console.log("🚀 [EV-Master] 準備發送數據去 Netlify...", lastBatteryData);
+
+                const response = await fetch('/.netlify/functions/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        history: [],
+                        message: `請根據以下這份電動車電池的實時監測數據，進行深度健康度(SOH)診斷與保養建議報告：\n${JSON.stringify(lastBatteryData, null, 2)}`
+                    })
+                });
+                
+                if (!response.ok) throw new Error(`API 錯誤碼: ${response.status}`);
+                
+                const data = await response.json();
+                console.log("📥 [EV-Master] 成功收到後端回傳：", data);
+
+                if (data.reply) {
+                    const analysis = data.reply.replace(/\n/g, '<br>');
+                    analysisContent.innerHTML = `<div class="ai-report-text">${analysis}</div>`;
+                } else {
+                    analysisContent.innerHTML = '<p style="color: #ff6b6b;">AI 診斷失敗，後端未有正確回傳文字內容。</p>';
+                }
+            } catch (error) {
+                console.error('❌ AI 診斷出錯:', error);
+                if (analysisContent) {
+                    analysisContent.innerHTML = '<p style="color: #ff6b6b;">連線錯誤：' + error.message + '</p>';
+                }
+            }
         });
-        
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        // 🛠️ 關鍵修改三：讀取返我哋後端回傳嘅 { reply: "..." } 格式
-        // OpenRouter 免費模型只要成功回傳，內容就會直接在 data.reply 裡面
-        if (data.reply) {
-            // 將 AI 回傳的換行符 \n 轉成網頁睇得明嘅 <br> 標籤
-            const analysis = data.reply.replace(/\n/g, '<br>');
-            analysisContent.innerHTML = `<div class="ai-report-text">${analysis}</div>`;
-        } else {
-            analysisContent.innerHTML = '<p style="color: #ff6b6b;">AI 診斷失敗，後端未有正確回傳文字內容。</p>';
-        }
-    } catch (error) {
-        console.error('AI analysis error:', error);
-        analysisContent.innerHTML = '<p style="color: #ff6b6b;">連線錯誤：' + error.message + '</p>';
+    } else {
+        // 📢 如果你 HTML 裡面粒掣嘅 id 唔係叫 analyzeWithAI，Console 就會印呢行出嚟警告你
+        console.log("❌ 錯誤：喺 HTML 裡面找不到 id='analyzeWithAI' 的按鈕，請檢查 HTML 標籤！");
     }
 });
 
