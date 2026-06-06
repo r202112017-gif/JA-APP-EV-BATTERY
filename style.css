@@ -1331,9 +1331,26 @@ a.card {
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
+    .points-dashboard {
+        padding: 0 5% 3rem;
+    }
+
     .dashboard-stats {
         grid-template-columns: repeat(2, 1fr);
         gap: 1rem;
+    }
+
+    .stat-card {
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
+
+    .stat-icon {
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-info {
+        min-width: 0;
     }
 
     .modal-content {
@@ -1370,5 +1387,26 @@ a.card {
     .scanner-controls .btn-secondary,
     .scanner-controls .btn-danger {
         width: 100%;
+    }
+}
+
+@media (max-width: 576px) {
+    .dashboard-stats {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .stat-card {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        padding: 1.2rem;
+    }
+
+    .stat-icon {
+        margin-bottom: 0.5rem;
+    }
+
+    .points-dashboard {
+        padding: 0 3% 3rem;
     }
 }
