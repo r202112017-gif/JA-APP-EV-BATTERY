@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-        .controls { padding: 12px; background: #2c3e50; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .controls { padding: 12px; background: #2c3e50; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); position: relative; }
+        .controls-right { position: absolute; right: 12px; }
         .btn { background: #34495e; color: white; border: none; padding: 8px 16px; margin: 0 4px; border-radius: 4px; cursor: pointer; font-size: 14px; transition: background 0.2s; }
         .btn:hover { background: #1abc9c; }
         .btn.active { background: #1abc9c; font-weight: bold; }
@@ -26,6 +27,9 @@
         <button class="btn active" id="btn-all" onclick="filterMarkers('all')">顯示全部</button>
         <button class="btn" id="btn-charging" onclick="filterMarkers('charging')">⚡ 充電及泊車</button>
         <button class="btn" id="btn-recycle" onclick="filterMarkers('recycle')">♻️ 電池回收點</button>
+        <div class="controls-right">
+            <button class="btn" id="btn-nav" onclick="toggleNavMenu()">☰ 選單</button>
+        </div>
     </div>
     <div id="map"></div>
 
@@ -161,6 +165,12 @@
         // timer
         setInterval(fetchLatestData, 60000);
 
-    </script>
+        // navigation menu toggle
+        function toggleNavMenu() {
+            alert('導航選單\n\n• 首頁\n• 地圖\n• 電池健康檢查\n• 買賣/交易\n• 設定');
+        }
+
+    </script>;
+        }
 </body>
 </html>
