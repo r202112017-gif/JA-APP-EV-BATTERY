@@ -305,9 +305,9 @@ a.card {
 
 /* Chat Widget */
 .chat-toggle-btn {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
+    position: static;
+    display: inline-flex;
+    margin: 1.5rem auto 0;
     background: var(--primary-green);
     color: var(--dark-bg);
     border: none;
@@ -315,46 +315,37 @@ a.card {
     border-radius: 50px;
     font-weight: bold;
     cursor: pointer;
-    box-shadow: 0 4px 20px var(--accent-glow);
-    z-index: 99;
+    box-shadow: 0 4px 20px rgba(0, 200, 81, 0.25);
     transition: 0.3s;
 }
 
 .chat-toggle-btn:hover {
     transform: scale(1.05);
-    box-shadow: 0 6px 30px var(--primary-green);
+    box-shadow: 0 6px 30px rgba(0, 200, 81, 0.35);
 }
 
 .chat-widget-container {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    width: 380px;
-    max-width: calc(100% - 2rem);
-    height: 500px;
-    z-index: 100;
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
     background: #000000;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 24px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
     padding: 0.4rem;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    transform: translateY(20px);
+    margin-top: 2rem;
+    display: none;
 }
 
 .chat-widget-container.active {
-    opacity: 1;
-    pointer-events: all;
-    transform: translateY(0);
+    display: block;
 }
 
 .chat-widget {
-    position: absolute;
-    inset: 0;
+    position: relative;
     width: 100%;
-    height: 100%;
+    min-height: 500px;
     background: transparent;
     border: none;
     box-shadow: none;
@@ -615,15 +606,15 @@ a.card {
     }
 
     .chat-widget {
-        width: calc(100% - 2rem);
+        width: 100%;
         height: 70vh;
-        bottom: 1rem;
-        right: 1rem;
+        bottom: auto;
+        right: auto;
     }
 
     .chat-toggle-btn {
-        bottom: 1rem;
-        right: 1rem;
+        position: static;
+        margin: 1.25rem auto 0;
         padding: 0.75rem 1.2rem;
         font-size: 0.9rem;
     }
