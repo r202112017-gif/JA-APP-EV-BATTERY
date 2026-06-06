@@ -100,7 +100,7 @@
                     if (isIOS) {
                         mapUrl = `https://maps.apple.com/?daddr=${loc.lat},${loc.lng}`;
                     } else {
-                        mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`;
+                        mapUrl = `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`;
                     }
 
                     const popupHTML = `
@@ -130,29 +130,31 @@
 
         // real time update function
         async function fetchLatestData() {
-            console.log("正在向政府伺服器索取實時數據...");
-            try {
-                const response = await fetch('https://api.data.gov.hk/v1/carpark-info-vacancy');
-                const govData = await response.json();
-                const realHarbourCityData = govData.results.find(
-                    carpark => carpark.name === '尖沙咀海港城停車場 (海運大廈)' 
-                );
+    console.log("正在向政府伺服器索取實時車位數據...");
+    try {
+        const response = await fetch('https://api.data.gov.hk/v1/carpark-info-vacancy?data=vacancy');
+        const govData = await response.json();
+        console.log("政府停車場完整清單：", govData.results);
+        const realHarbourCityData = govData.results.find(
+            carpark => carpark.park_Id === '這裡填入海港城的真實ID' 
+        );
 
-                if (realHarbourCityData) {
-                    const myHarbourCity = allLocations.find(loc => loc.name.includes('海港城'));
-                    if (myHarbourCity) {
-                        const currentVacancy = realHarbourCityData.vacancy;
-                        const vacancyColor = currentVacancy > 0 ? '#27ae60' : 'red';
-                        myHarbourCity.details = `快充 (60kW) x 2 | 中充 (7kW) x 10<br>
-                        <b style="color: ${vacancyColor}">實時剩餘車位：${currentVacancy} 個</b> (政府 API 實時同步)`;
-                    }
-                }
-                renderMarkers();
-                console.log("地圖已根據政府實時數據更新");
-            } catch (error) {
-                console.error("API 連線失敗，請檢查網路：", error);
+        if (realHarbourCityData && realHarbourCityData.privateCar && realHarbourCityData.privateCar.length > 0) {
+            const myHarbourCity = allLocations.find(loc => loc.name.includes('海港城'));
+            if (myHarbourCity) {
+                const currentVacancy = realHarbourCityData.privateCar[0].vacancy;
+                const vacancyColor = currentVacancy > 0 ? '#27ae60' : 'red';
+                
+                myHarbourCity.details = `快充 (60kW) x 2 | 中充 (7kW) x 10<br>
+                <b style="color: ${vacancyColor}">實時剩餘車位：${currentVacancy} 個</b> (政府 API 實時同步)`;
             }
         }
+        renderMarkers(); 
+        console.log("地圖已根據政府實時數據更新");
+    } catch (error) {
+        console.error("API 連線失敗，請檢查網路：", error);
+    }
+}
         
         renderMarkers();
         // timer
