@@ -9,6 +9,7 @@
 <body>
     <nav>
         <div class="logo">EV-RE</div>
+        <button class="nav-toggle" aria-label="Toggle navigation">☰</button>
         <ul class="nav-links">
             <li><a href="index.html">Home</a></li>
             <li><a href="battery-health.html">Battery Health</a></li>
@@ -173,6 +174,18 @@
             <div id="activityList" class="activity-list"></div>
         </div>
     </section>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const toggle = document.querySelector('.nav-toggle');
+            const menu = document.querySelector('.nav-links');
+            if (toggle && menu) {
+                toggle.addEventListener('click', function () {
+                    menu.classList.toggle('open');
+                });
+            }
+        });
+    </script>
 
     <script>
         // Points System Manager
