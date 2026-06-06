@@ -465,10 +465,85 @@ nav {
 }
 
 /* Mobile Responsive */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
+    nav {
+        flex-wrap: wrap;
+        padding: 1rem 5%;
+    }
+
+    .nav-links {
+        flex-wrap: wrap;
+        gap: 1rem;
+        justify-content: center;
+    }
+
+    .hero {
+        height: auto;
+        padding: 3rem 5% 2rem;
+    }
+
+    .hero h1 {
+        font-size: 2.4rem;
+    }
+
+    .hero p {
+        font-size: 1rem;
+        max-width: 100%;
+    }
+
+    .features,
+    .tool {
+        padding: 3rem 5%;
+    }
+
+    .card {
+        padding: 1.8rem;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .button-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .button-group button,
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger,
+    .btn-small {
+        width: 100%;
+    }
+
+    .obd-panel {
+        width: calc(100% - 2rem);
+        max-width: 100%;
+        margin: 1rem auto;
+        left: 0;
+        right: 0;
+    }
+
+    .obd-container {
+        padding: 1rem;
+    }
+
+    .obd-actions,
+    .obd-parameter {
+        width: 100%;
+    }
+
+    .obd-data-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
     .chat-widget {
         width: calc(100% - 2rem);
-        height: 60vh;
+        height: 70vh;
         bottom: 1rem;
         right: 1rem;
     }
@@ -478,6 +553,45 @@ nav {
         right: 1rem;
         padding: 0.75rem 1.2rem;
         font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 600px) {
+    nav {
+        padding: 1rem 3%;
+    }
+
+    .nav-links {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .hero {
+        padding: 2.5rem 3% 1.5rem;
+    }
+
+    .hero h1 {
+        font-size: 2rem;
+    }
+
+    .hero p {
+        font-size: 0.95rem;
+    }
+
+    .chat-widget {
+        width: calc(100% - 1.5rem);
+        height: 75vh;
+        right: 0.75rem;
+        bottom: 0.75rem;
+    }
+
+    .chat-input-area {
+        flex-direction: column;
+    }
+
+    #chatInput,
+    .chat-send-btn {
+        width: 100%;
     }
 }
 
