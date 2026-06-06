@@ -658,39 +658,50 @@
             lastBatteryData = { carModel, originalCapacity, currentCapacity, manufactureYear, mileage, healthScore: result.healthScore };
         });
 
-        // AI Deep Analysis
-        document.getElementById('analyzeWithAI').addEventListener('click', async function() {
-            if (!lastBatteryData) return;
-            
-            const analysisCard = document.getElementById('aiAnalysisResult');
-            const analysisContent = document.getElementById('aiAnalysisContent');
-            
-            analysisCard.classList.remove('hidden');
-            analysisContent.innerHTML = '<p class="loading-text">⏳ AI 正在分析中...</p>';
-            
-            try {
-                const response = await fetch('/api/analyze-battery', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(lastBatteryData)
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`API error: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                if (data.success) {
-                    const analysis = data.analysis.replace(/\n/g, '<br>');
-                    analysisContent.innerHTML = `<p>${analysis}</p>`;
-                } else {
-                    analysisContent.innerHTML = '<p style="color: #ff6b6b;">AI 分析失敗，請稍後重試。</p>';
-                }
-            } catch (error) {
-                console.error('AI analysis error:', error);
-                analysisContent.innerHTML = '<p style="color: #ff6b6b;">連線錯誤：' + error.message + '</p>';
-            }
+ document.getElementById('analyzeWithAI').addEventListener('click', async function() {
+    // 1. 安全檢查：如果未有電池數據就直接返回
+    if (!lastBatteryData) return;
+    
+    const analysisCard = document.getElementById('aiAnalysisResult');
+    const analysisContent = document.getElementById('aiAnalysisContent');
+    
+    // 顯示分析卡片並呈現 Loading 狀態
+    analysisCard.classList.remove('hidden');
+    analysisContent.innerHTML = '<p class="loading-text">⏳ EV-Master 正在分析電池數據中...</p>';
+    
+    try {
+        // 🛠️ 關鍵修改一：網址改成 Netlify Functions 嘅相對路徑
+        const response = await fetch('/.netlify/functions/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            // 🛠️ 關鍵修改二：配對返我哋後端 chat.js 預期要收到嘅 history 同 message 格式
+            // 我哋將電池數據轉成文字，當作 message 射過去
+            body: JSON.stringify({
+                history: [], // 一鍵生成報告不需要之前的對話歷史，留空陣列即可
+                message: `請根據以下這份電動車電池的實時監測數據，進行深度健康度(SOH)診斷與保養建議報告：\n${JSON.stringify(lastBatteryData, null, 2)}`
+            })
         });
+        
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // 🛠️ 關鍵修改三：讀取返我哋後端回傳嘅 { reply: "..." } 格式
+        // OpenRouter 免費模型只要成功回傳，內容就會直接在 data.reply 裡面
+        if (data.reply) {
+            // 將 AI 回傳的換行符 \n 轉成網頁睇得明嘅 <br> 標籤
+            const analysis = data.reply.replace(/\n/g, '<br>');
+            analysisContent.innerHTML = `<div class="ai-report-text">${analysis}</div>`;
+        } else {
+            analysisContent.innerHTML = '<p style="color: #ff6b6b;">AI 診斷失敗，後端未有正確回傳文字內容。</p>';
+        }
+    } catch (error) {
+        console.error('AI analysis error:', error);
+        analysisContent.innerHTML = '<p style="color: #ff6b6b;">連線錯誤：' + error.message + '</p>';
+    }
+});
 
         // ===== OBD READER IMPLEMENTATION =====
         class OBDReader {
