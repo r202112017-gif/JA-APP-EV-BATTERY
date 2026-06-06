@@ -1332,15 +1332,19 @@ a.card {
 /* Mobile Responsive */
 @media (max-width: 768px) {
     .points-dashboard {
-        padding: 0 5% 3rem;
+        padding: 0 3% 3rem;
     }
 
     .dashboard-stats {
-        grid-template-columns: repeat(2, 1fr);
+        width: 100%;
+        max-width: 100%;
+        grid-template-columns: 1fr;
         gap: 1rem;
     }
 
     .stat-card {
+        min-width: 0;
+        width: 100%;
         flex-wrap: wrap;
         align-items: flex-start;
     }

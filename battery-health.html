@@ -31,7 +31,9 @@
         </div>
         <div class="card">
             <h3>OBD 藍牙連線</h3>
-            <p>支援 Bluetube / OBD II 連接，直接抓取電池電壓、溫度與 SOH 狀態。</p>            <button id=\"obdToggleBtn\" class=\"btn-small\">開啟 OBD 連線</button>        </div>
+            <p>支援 Bluetooth / OBD II 連接，直接抓取電池電壓、溫度與 SOH 狀態。</p>
+            <button id="obdToggleBtn" class="btn-small">開啟 OBD 連線</button>
+        </div>
         <div class="card">
             <h3>AI 智能分析</h3>
             <p>結合歷史數據與最新電池演算法，判斷電池殘值與最佳保養方案。</p>
@@ -58,7 +60,7 @@
                     </label>
                     <label class="form-group">
                         <span>製造年份</span>
-                        <input type="number" id="manufactureYear" min="2000" max="2026" step="1" placeholder="例如：2019" required>
+                        <input type="number" id="manufactureYear" min="2000" max="2035" step="1" placeholder="例如：2019" required>
                     </label>
                     <label class="form-group">
                         <span>總行駛里程 (km)</span>
@@ -84,7 +86,6 @@
         </div>
     </section>
 
-    <!-- OBD Reader Panel -->
     <div id="obdPanel" class="obd-panel hidden">
         <div class="obd-header">
             <h2>OBD 即時診斷系統</h2>
@@ -171,13 +172,12 @@
         </div>
     </div>
 
-    <!-- AI Chat Widget -->
     <div id="chatWidget" class="chat-widget">
         <div class="chat-header">
             <h3>EV-RE AI 助手</h3>
             <button id="chatToggle" class="chat-close-btn" aria-label="關閉聊天">✕</button>
         </div>
-        <div id="chatMessages" class="chat-messages"></div>
+        <div class="chat-messages"></div>
         <div class="chat-input-area">
             <input type="text" id="chatInput" placeholder="輸入您的問題..." />
             <button id="chatSend" class="chat-send-btn" aria-label="發送">→</button>
@@ -280,7 +280,7 @@
             const analysisContent = document.getElementById('aiAnalysisContent');
             
             analysisCard.classList.remove('hidden');
-            analysisContent.innerHTML = '<p class=\"loading-text\">⏳ AI 正在分析中...</p>';
+            analysisContent.innerHTML = '<p class="loading-text">⏳ AI 正在分析中...</p>';
             
             try {
                 const response = await fetch('/api/analyze-battery', {
@@ -298,11 +298,11 @@
                     const analysis = data.analysis.replace(/\n/g, '<br>');
                     analysisContent.innerHTML = `<p>${analysis}</p>`;
                 } else {
-                    analysisContent.innerHTML = '<p style=\"color: #ff6b6b;\">AI 分析失敗，請稍後重試。</p>';
+                    analysisContent.innerHTML = '<p style="color: #ff6b6b;">AI 分析失敗，請稍後重試。</p>';
                 }
             } catch (error) {
                 console.error('AI analysis error:', error);
-                analysisContent.innerHTML = '<p style=\"color: #ff6b6b;\">連線錯誤：' + error.message + '</p>';
+                analysisContent.innerHTML = '<p style="color: #ff6b6b;">連線錯誤：' + error.message + '</p>';
             }
         });
 
@@ -311,7 +311,7 @@
         const chatWidget = document.getElementById('chatWidget');
         const chatToggle = document.getElementById('chatToggle');
         const chatToggleBtn = document.getElementById('chatToggleBtn');
-        const chatMessages = document.getElementById('chatMessages');
+        const chatMessages = document.querySelector('.chat-messages'); // 修正：精準抓取 message container
         const chatInput = document.getElementById('chatInput');
         const chatSend = document.getElementById('chatSend');
 
@@ -330,14 +330,14 @@
             const message = chatInput.value.trim();
             if (!message) return;
 
-            chatMessages.innerHTML += `<div class=\"message user-message\"><p>${escapeHtml(message)}</p></div>`;
+            chatMessages.innerHTML += `<div class="message user-message"><p>${escapeHtml(message)}</p></div>`;
             conversationHistory.push({ role: 'user', content: message });
             chatInput.value = '';
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
             const loadingMsg = document.createElement('div');
             loadingMsg.className = 'message ai-message';
-            loadingMsg.innerHTML = '<p class=\"typing-indicator\">●●●</p>';
+            loadingMsg.innerHTML = '<p class="typing-indicator">●●●</p>';
             chatMessages.appendChild(loadingMsg);
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -353,8 +353,9 @@
                 loadingMsg.remove();
                 const aiMsg = document.createElement('div');
                 aiMsg.className = 'message ai-message';
+                chatMessages.appendChild(aiMsg); // 修正：先 append 確保 DOM 存在
+                
                 let fullText = '';
-
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
 
@@ -371,7 +372,8 @@
                                 if (json.done) break;
                                 if (json.text) {
                                     fullText += json.text;
-                                    aiMsg.innerHTML = `<p>${escapeHtml(fullText)}</p>`;
+                                    // 修正點 2: Stream 輸出時，將換行符轉為 <br>，避免破壞結構或格式
+                                    aiMsg.innerHTML = `<p>${escapeHtml(fullText).replace(/\n/g, '<br>')}</p>`;
                                 }
                             } catch (e) {}
                         }
@@ -379,11 +381,8 @@
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                 }
 
-                if (aiMsg.parentNode) {
-                    chatMessages.appendChild(aiMsg);
-                    conversationHistory.push({ role: 'assistant', content: fullText });
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
+                conversationHistory.push({ role: 'assistant', content: fullText });
+                
             } catch (error) {
                 loadingMsg.remove();
                 const errorMsg = document.createElement('div');
@@ -424,6 +423,7 @@
 
             log(message) {
                 const logContent = document.getElementById('obdLogContent');
+                if (!logContent) return;
                 const timestamp = new Date().toLocaleTimeString('zh-HK');
                 const logEntry = document.createElement('div');
                 logEntry.className = 'log-entry';
@@ -436,43 +436,36 @@
                 this.isConnected = connected;
                 const statusIndicator = document.getElementById('connectionStatus');
                 const connectionText = document.getElementById('connectionText');
-                statusIndicator.className = `status-indicator ${connected ? 'connected' : 'disconnected'}`;
-                connectionText.textContent = statusText;
+                if(statusIndicator) statusIndicator.className = `status-indicator ${connected ? 'connected' : 'disconnected'}`;
+                if(connectionText) connectionText.textContent = statusText;
                 document.getElementById('stopOBDBtn').classList.toggle('hidden', !connected);
                 document.getElementById('autoFillBatteryBtn').style.display = connected ? 'inline-block' : 'none';
             }
 
             updateParameterDisplay() {
-                // Voltage: 350-420V range for EV batteries
                 document.getElementById('voltageValue').textContent = this.data.voltage.toFixed(1);
-                document.getElementById('voltageBar').style.width = ((this.data.voltage - 350) / 70 * 100) + '%';
+                document.getElementById('voltageBar').style.width = clamp(((this.data.voltage - 350) / 70 * 100), 0, 100) + '%';
 
-                // Temperature: 0-60°C range
                 document.getElementById('temperatureValue').textContent = this.data.temperature.toFixed(1);
-                document.getElementById('temperatureBar').style.width = (this.data.temperature / 60 * 100) + '%';
+                document.getElementById('temperatureBar').style.width = clamp((this.data.temperature / 60 * 100), 0, 100) + '%';
 
-                // Current: -150 to +150A (negative = discharging, positive = charging)
                 document.getElementById('currentValue').textContent = this.data.current.toFixed(1);
-                document.getElementById('currentBar').style.width = Math.abs(this.data.current) / 150 * 100 + '%';
+                document.getElementById('currentBar').style.width = clamp(Math.abs(this.data.current) / 150 * 100, 0, 100) + '%';
 
-                // SOH: 0-100%
                 document.getElementById('sohValue').textContent = this.data.soh.toFixed(1);
-                document.getElementById('sohBar').style.width = this.data.soh + '%';
+                document.getElementById('sohBar').style.width = clamp(this.data.soh, 0, 100) + '%';
 
-                // Range: 0-500km
                 document.getElementById('rangeValue').textContent = this.data.range.toFixed(0);
-                document.getElementById('rangeBar').style.width = (this.data.range / 500 * 100) + '%';
+                document.getElementById('rangeBar').style.width = clamp((this.data.range / 500 * 100), 0, 100) + '%';
 
-                // Charging status
                 document.getElementById('chargingStatus').textContent = this.data.charging ? '🔌 充電中' : '⏸ 待機';
             }
 
             simulateData() {
-                // Simulate realistic battery data with variations
                 this.data.voltage = 380 + Math.sin(Date.now() / 5000) * 10 + Math.random() * 5;
                 this.data.current = Math.sin(Date.now() / 3000) * 100 + (Math.random() - 0.5) * 20;
                 this.data.temperature = 25 + Math.sin(Date.now() / 4000) * 8 + Math.random() * 3;
-                this.data.soh = 92 + Math.random() * 2; // 92-94% for healthy battery
+                this.data.soh = 92 + Math.random() * 2;
                 this.data.range = Math.max(50, 350 + Math.sin(Date.now() / 2000) * 30 + Math.random() * 10);
                 this.data.charging = Math.sin(Date.now() / 6000) > 0;
 
@@ -482,7 +475,6 @@
             async connectBluetooth() {
                 this.log('正在搜尋 OBD 藍牙設備...');
                 try {
-                    // Use Web Bluetooth API if available
                     if (!navigator.bluetooth) {
                         this.log('❌ 瀏覽器不支援藍牙連線');
                         alert('您的瀏覽器不支援 Web Bluetooth API');
@@ -492,7 +484,7 @@
                     this.device = await navigator.bluetooth.requestDevice({
                         filters: [
                             { name: /OBD/ },
-                            { services: ['0000fff0-0000-1000-8000-00805f9b34fb'] } // OBD service UUID
+                            { services: ['0000fff0-0000-1000-8000-00805f9b34fb'] }
                         ]
                     });
 
@@ -517,7 +509,7 @@
                 this.log('⚠ 此模式為測試用途，數據為模擬生成');
 
                 this.simulationInterval = setInterval(() => this.simulateData(), 500);
-                this.simulateData(); // Initial update
+                this.simulateData();
             }
 
             stopConnection() {
@@ -537,13 +529,13 @@
                     return;
                 }
 
-                // Estimate battery capacity from voltage and SOH
-                const estimatedCapacity = Math.round((this.data.voltage / 400) * 80); // Rough estimate
+                const estimatedCapacity = Math.round((this.data.voltage / 400) * 80);
 
                 document.getElementById('carModel').value = '從 OBD 讀取的車型';
                 document.getElementById('originalCapacity').value = estimatedCapacity;
                 document.getElementById('currentCapacity').value = Math.round(estimatedCapacity * (this.data.soh / 100));
-                document.getElementById('mileage').value = Math.round(Math.random() * 150000); // Mock mileage
+                document.getElementById('manufactureYear').value = new Date().getFullYear() - 2; // 預設兩年車
+                document.getElementById('mileage').value = 45000;
 
                 this.log('✅ 已自動填入電池表單');
                 document.getElementById('obdPanel').classList.add('hidden');
@@ -564,8 +556,7 @@
 
         document.getElementById('connectBluetoothBtn').addEventListener('click', async () => {
             if (await obdReader.connectBluetooth()) {
-                // Start reading data (implementation depends on actual OBD adapter)
-                obdReader.startSimulator(); // Fallback to simulator
+                obdReader.startSimulator();
             }
         });
 
