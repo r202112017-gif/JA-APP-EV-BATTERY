@@ -49,5 +49,16 @@
             <p>採用先進藍牙 OBD 連線、AI 分析與本地服務整合，幫您把電動車零件、電池回收與綠色駕駛統一在同一平台中。</p>
         </div>
     </section>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const toggle = document.querySelector('.nav-toggle');
+            const menu = document.querySelector('.nav-links');
+            if (toggle && menu) {
+                toggle.addEventListener('click', function () {
+                    menu.classList.toggle('open');
+                });
+            }
+        });
+    </script>
 </body>
 </html>
