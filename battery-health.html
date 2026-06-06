@@ -83,6 +83,90 @@
         #btn-sim-connect:hover { background: #00a8cc; }
         #btn-sim-connect:disabled { background: #444; color: #888; cursor: not-allowed; }
         /* =================================================================== */
+        /* AI assistant panel */
+        .ai-assistant-panel {
+            background: #1a1c1e;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #2d3139;
+            color: #e3e2e6;
+            margin-top: 25px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        .ai-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2d3139;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .ai-title { display: flex; align-items: center; gap: 12px; }
+        .ai-icon { font-size: 1.8em; }
+        .ai-title h4 { margin: 0; color: #a8c7fa; font-size: 1.1em; }
+        .ai-subtitle { margin: 2px 0 0 0; color: #8e9199; font-size: 0.8em; }
+
+        .btn-ai-analyze {
+            background: linear-gradient(135deg, #a8c7fa 0%, #7cacf8 100%);
+            color: #043066;
+            border: none;
+            padding: 10px 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+        .btn-ai-analyze:hover { transform: translateY(-1px); opacity: 0.9; }
+
+        .ai-chat-box {
+            background: #111315;
+            border: 1px solid #2d3139;
+            border-radius: 8px;
+            height: 300px;
+            overflow-y: auto;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .ai-message {
+            padding: 10px 14px;
+            border-radius: 8px;
+            max-width: 85%;
+            line-height: 1.5;
+            font-size: 0.95em;
+            word-break: break-word;
+        }
+        .msg-system { background: #22252a; color: #c4c6cf; align-self: center; text-align: center; max-width: 95%; font-size: 0.85em; border: 1px dashed #43474e; }
+        .msg-user { background: #0b57d0; color: #ffffff; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .msg-ai { background: #2d3139; color: #e3e2e6; align-self: flex-start; border-bottom-left-radius: 2px; }
+
+        .ai-input-group { display: flex; gap: 10px; }
+        #ai-user-input {
+            flex: 1;
+            background: #111315;
+            border: 1px solid #43474e;
+            border-radius: 6px;
+            padding: 12px;
+            color: #fff;
+            font-size: 0.95em;
+        }
+        #ai-user-input:focus { border-color: #a8c7fa; outline: none; }
+        #btn-ai-send {
+            background: #2d3139;
+            color: #a8c7fa;
+            border: 1px solid #43474e;
+            padding: 0 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .btn-ai-send:hover { background: #3c4048; }
+        /* =================================================================== */
     </style>
 </head>
 <body>
@@ -299,6 +383,31 @@
         </div>
     </div>
 
+    <!-- AI 診斷對話面板 -->
+    <div class="ai-assistant-panel" aria-live="polite">
+        <div class="ai-header">
+            <div class="ai-title">
+                <span class="ai-icon">🤖</span>
+                <div>
+                    <h4>EV-Master 智能 AI 診斷專家</h4>
+                    <p class="ai-subtitle">基於 Gemini 2.5 大模型驅動</p>
+                </div>
+            </div>
+            <button type="button" class="btn-ai-analyze" id="btn-ai-analyze">📊 一鍵生成深度診斷報告</button>
+        </div>
+
+        <div class="ai-chat-box" id="ai-chat-history">
+            <div class="ai-message msg-system">
+                <strong>系統提示：</strong>診斷專家已就緒。點擊上方按鈕可以讓 AI 讀取表單數據並生成專業電池健康分析報告；你亦可以直接在下方輸入任何關於電動車電池的疑問。
+            </div>
+        </div>
+
+        <div class="ai-input-group">
+            <input type="text" id="ai-user-input" placeholder="請輸入你的問題... (例如：SOH 92% 還能開多久？)" />
+            <button type="button" id="btn-ai-send">發送</button>
+        </div>
+    </div>
+
     <div id="chatWidget" class="chat-widget">
         <div class="chat-header">
             <h3>EV-RE AI 助手</h3>
@@ -313,6 +422,77 @@
     <button id="chatToggleBtn" class="chat-toggle-btn" title="開啟 AI 助手">💬 AI 助手</button>
 
     <script>
+        // ===== AI assistant wiring =====
+        function appendAiMessage(type, html) {
+            const box = document.getElementById('ai-chat-history');
+            if (!box) return;
+            const el = document.createElement('div');
+            let cls = 'ai-message ';
+            if (type === 'system') cls += 'msg-system';
+            else if (type === 'user') cls += 'msg-user';
+            else cls += 'msg-ai';
+            el.className = cls;
+            el.innerHTML = html;
+            box.appendChild(el);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function triggerAiAnalysis() {
+            const carModel = document.getElementById('carModel').value || '';
+            const originalCapacity = Number(document.getElementById('originalCapacity').value) || null;
+            const currentCapacity = Number(document.getElementById('currentCapacity').value) || null;
+            const manufactureYear = Number(document.getElementById('manufactureYear').value) || null;
+            const mileage = Number(document.getElementById('mileage').value) || null;
+
+            appendAiMessage('user', `<strong>請生成報告：</strong> ${carModel} ${originalCapacity || '-'}kWh / ${currentCapacity || '-'}kWh`);
+
+            try {
+                const payload = { carModel, originalCapacity, currentCapacity, manufactureYear, mileage };
+                const res = await fetch('/api/analyze-battery', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('API error ' + res.status);
+                const data = await res.json();
+                if (data && data.analysis) {
+                    appendAiMessage('assistant', `<div>${data.analysis.replace(/\n/g,'<br>')}</div>`);
+                } else {
+                    appendAiMessage('assistant', '<em>無法取得分析結果，請稍後重試。</em>');
+                }
+            } catch (err) {
+                appendAiMessage('assistant', `<em>錯誤：${err.message}</em>`);
+            }
+        }
+
+        async function sendUserMessage() {
+            const input = document.getElementById('ai-user-input');
+            if (!input) return;
+            const text = input.value.trim();
+            if (!text) return;
+            appendAiMessage('user', `<p>${text}</p>`);
+            input.value = '';
+
+            try {
+                const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text }) });
+                if (!res.ok) throw new Error('chat API error ' + res.status);
+                const data = await res.json();
+                const reply = data.reply || data.content || data.message || '抱歉，無回應。';
+                appendAiMessage('assistant', `<p>${reply}</p>`);
+            } catch (err) {
+                appendAiMessage('assistant', `<em>錯誤：${err.message}</em>`);
+            }
+        }
+
+        function handleAiKeyPress(e) { if (e.key === 'Enter') sendUserMessage(); }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const btn = document.getElementById('btn-ai-analyze');
+            const send = document.getElementById('btn-ai-send');
+            const input = document.getElementById('ai-user-input');
+            if (btn) btn.addEventListener('click', triggerAiAnalysis);
+            if (send) send.addEventListener('click', sendUserMessage);
+            if (input) input.addEventListener('keypress', handleAiKeyPress);
+        });
+        // ===== end AI assistant wiring =====
         function clamp(value, min, max) {
             return Math.min(Math.max(value, min), max);
         }
