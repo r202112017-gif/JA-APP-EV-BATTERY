@@ -5,6 +5,85 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Battery Health | EV-RE</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Hero click modal styles */
+        .modal-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: #fff; padding: 20px; max-width: 640px; width: 92%; border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
+        .modal .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .modal .close-btn { background: transparent; border: none; font-size: 20px; cursor: pointer; }
+        .modal .modal-body p { margin: 0; }
+        .hero { cursor: pointer; }
+        /* ==================== OBD Simulator styles (appended) ==================== */
+        .obd-simulator-panel {
+            background: #1e1e1e;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            color: #fff;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-top: 20px;
+        }
+        .obd-status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+            margin-bottom: 20px;
+        }
+        .obd-status-bar h3 { margin: 0; color: #00d2ff; font-size: 1.2em; }
+        .sim-status-indicator { font-weight: bold; font-size: 0.9em; }
+        .sim-status-offline { color: #ff4444; }
+        .sim-status-connecting { color: #ffbb33; }
+        .sim-status-online { color: #00C851; text-shadow: 0 0 10px rgba(0,200,81,0.5); }
+
+        .sim-data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .sim-data-card {
+            background: #2a2a2a;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .sim-label { font-size: 0.8em; color: #888; display: block; margin-bottom: 4px; }
+        .sim-value { font-size: 1.3em; font-weight: bold; font-family: monospace; color: #fff; }
+
+        .sim-terminal {
+            background: #050505;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.8em;
+            height: 150px;
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #222;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .sim-terminal p { margin: 2px 0; line-height: 1.4; }
+
+        #btn-sim-connect, #btn-sim-autofill {
+            background: #00d2ff;
+            color: #000;
+            border: none;
+            padding: 12px 20px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s;
+            font-size: 1em;
+        }
+        #btn-sim-connect:hover { background: #00a8cc; }
+        #btn-sim-connect:disabled { background: #444; color: #888; cursor: not-allowed; }
+        /* =================================================================== */
+    </style>
 </head>
 <body>
     <nav>
@@ -23,6 +102,54 @@
         <h1>Battery Health</h1>
         <p>輸入您的車型與電池資料，或透過 OBD 藍牙連線進行即時診斷，AI 幫您分析電池健康狀態與壽命預測。</p>
     </header>
+
+    <div id="heroModal" class="modal-overlay" role="dialog" aria-hidden="true" aria-labelledby="heroModalTitle">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="heroModalTitle">歡迎使用電池健康工具</h2>
+                <button id="heroModalClose" class="close-btn" aria-label="關閉">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>您可以輸入電池數據、使用 OBD 藍牙連線或啟用 AI 深度分析。點選「開始使用」以快速填入範例或關閉此視窗直接使用頁面。</p>
+                <div style="margin-top:12px; text-align:right;">
+                    <button id="heroModalStart" class="btn-primary">開始使用</button>
+                </div>
+            </div>
+
+                <div class="obd-simulator-panel" aria-hidden="false">
+                    <div class="obd-status-bar">
+                        <h3>OBD-II 數據模擬終端</h3>
+                        <div id="sim-connection-status" class="sim-status-indicator sim-status-offline">🔴 斷開連接</div>
+                    </div>
+
+                    <div class="sim-data-grid">
+                        <div class="sim-data-card">
+                            <span class="sim-label">電池組總電壓</span>
+                            <span class="sim-value" id="sim-voltage">-- V</span>
+                        </div>
+                        <div class="sim-data-card">
+                            <span class="sim-label">健康度 (SOH)</span>
+                            <span class="sim-value" id="sim-soh">-- %</span>
+                        </div>
+                        <div class="sim-data-card">
+                            <span class="sim-label">電池模組溫度</span>
+                            <span class="sim-value" id="sim-temp">-- °C</span>
+                        </div>
+                        <div class="sim-data-card">
+                            <span class="sim-label">即時電流輸出</span>
+                            <span class="sim-value" id="sim-current">-- A</span>
+                        </div>
+                    </div>
+
+                    <div class="sim-terminal" id="sim-terminal-console">
+                        <p>&gt; 模擬器系統就緒。等待啟動指令...</p>
+                    </div>
+
+                    <button type="button" id="btn-sim-connect">啟動 OBD 模擬引擎</button>
+                    <button type="button" id="btn-sim-autofill" style="margin-top: 15px; background: #ffbb33; display: none; color: #000;">⚡ 同步數據到診斷表單</button>
+                </div>
+        </div>
+    </div>
 
     <section class="features">
         <div class="card">
@@ -573,12 +700,170 @@
         });
     </script>
     <script>
+        // ==================== OBD Simulator JS (appended) ====================
+        let obdSimConnected = false;
+        let obdSimLoopInterval;
+        let simBaseVoltage = 380.0;
+        let simBaseTemp = 25.0;
+        let simTargetSOH = 92;      // 模擬車輛健康度
+        let simTargetMileage = 85240; // 模擬車輛里程
+
+        function logToSimTerminal(msg) {
+            const consoleEl = document.getElementById('sim-terminal-console');
+            if (!consoleEl) return;
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            const p = document.createElement('p');
+            p.textContent = `[${time}] ${msg}`;
+            consoleEl.appendChild(p);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function startObdSimulation() {
+            if (obdSimConnected) return;
+
+            const statusEl = document.getElementById('sim-connection-status');
+            const btnConnect = document.getElementById('btn-sim-connect');
+            const btnAutofill = document.getElementById('btn-sim-autofill');
+
+            if (btnConnect) btnConnect.disabled = true;
+            if (statusEl) {
+                statusEl.textContent = "🟡 正在握手連線...";
+                statusEl.className = "sim-status-indicator sim-status-connecting";
+            }
+
+            logToSimTerminal(">> AT Z (重置 ELM327 模組)");
+            setTimeout(() => { logToSimTerminal("<< ELM327 v1.5 Ready"); }, 600);
+            setTimeout(() => { logToSimTerminal(">> AT SP 6 (波特率鎖定 CAN 協議)"); }, 1200);
+            setTimeout(() => { logToSimTerminal("<< OK"); }, 1700);
+
+            setTimeout(() => {
+                logToSimTerminal("✅ 成功連線！已建立穩定 CAN Bus 數據管道");
+                logToSimTerminal("🚗 偵測車型：Tesla Model 3 Long Range");
+
+                obdSimConnected = true;
+                if (statusEl) {
+                    statusEl.textContent = "🟢 已連線 (串流中)";
+                    statusEl.className = "sim-status-indicator sim-status-online";
+                }
+                if (btnConnect) btnConnect.style.display = 'none';
+                if (btnAutofill) btnAutofill.style.display = 'block';
+
+                // 每 500 毫秒刷新一次儀表板數據
+                obdSimLoopInterval = setInterval(refreshSimGauges, 500);
+            }, 2500);
+        }
+
+        function refreshSimGauges() {
+            let v = simBaseVoltage + (Math.random() * 0.8 - 0.4);
+            const volEl = document.getElementById('sim-voltage');
+            if (volEl) volEl.textContent = v.toFixed(1) + " V";
+
+            if (simBaseTemp < 31.5) simBaseTemp += 0.1;
+            let t = simBaseTemp + (Math.random() * 0.2 - 0.1);
+            const tempEl = document.getElementById('sim-temp');
+            if (tempEl) tempEl.textContent = t.toFixed(1) + " °C";
+
+            const sohEl = document.getElementById('sim-soh');
+            if (sohEl) sohEl.textContent = simTargetSOH + " %";
+
+            let a = 1.8 + (Math.random() * 1.2);
+            const curEl = document.getElementById('sim-current');
+            if (curEl) curEl.textContent = a.toFixed(1) + " A";
+
+            if (Math.random() > 0.85) {
+                logToSimTerminal(`>> 讀取 PID: 01 5B -> 回傳 41 5B ${Math.floor(Math.random()*20+80).toString(16).toUpperCase()}`);
+            }
+        }
+
+        // 同步模擬數據到頁面表單（已改為使用頁面上現有的 input id）
+        function syncObdToForm() {
+            logToSimTerminal("⚡ 正在複製模擬數據至主表單...");
+
+            const designCap = 75; // 設計容量
+            const currentCap = designCap * (simTargetSOH / 100); // 根據 SOH 計算當前可用容量
+
+            const modelInput = document.getElementById('carModel');
+            const origCapInput = document.getElementById('originalCapacity');
+            const currCapInput = document.getElementById('currentCapacity');
+            const mileageInput = document.getElementById('mileage');
+            const manufactureInput = document.getElementById('manufactureYear');
+
+            if (modelInput) modelInput.value = "Tesla Model 3 Long Range (OBD)";
+            if (origCapInput) origCapInput.value = designCap;
+
+            setTimeout(() => {
+                if (currCapInput) currCapInput.value = currentCap.toFixed(1);
+            }, 200);
+
+            setTimeout(() => {
+                if (mileageInput) mileageInput.value = simTargetMileage;
+                if (manufactureInput) manufactureInput.value = new Date().getFullYear() - 2;
+                logToSimTerminal("✅ 數據已成功同步到電池診斷表！");
+
+                const btnAutofill = document.getElementById('btn-sim-autofill');
+                if (btnAutofill) {
+                    btnAutofill.textContent = "✅ 數據已同步";
+                    btnAutofill.style.background = "#00C851";
+                }
+            }, 400);
+        }
+
+        // Hook buttons after DOM ready
+        document.addEventListener('DOMContentLoaded', function () {
+            const btnConnect = document.getElementById('btn-sim-connect');
+            const btnAutofill = document.getElementById('btn-sim-autofill');
+            if (btnConnect) btnConnect.addEventListener('click', startObdSimulation);
+            if (btnAutofill) btnAutofill.addEventListener('click', syncObdToForm);
+        });
+        // =========================================================================================
+    </script>
+    <script>
         document.addEventListener('DOMContentLoaded', function () {
             const toggle = document.querySelector('.nav-toggle');
             const menu = document.querySelector('.nav-links');
             if (toggle && menu) {
                 toggle.addEventListener('click', function () {
                     menu.classList.toggle('open');
+                });
+            }
+
+            // Hero modal: open when header is clicked
+            const headerHero = document.querySelector('.hero');
+            const heroModal = document.getElementById('heroModal');
+            const heroModalClose = document.getElementById('heroModalClose');
+            const heroModalStart = document.getElementById('heroModalStart');
+
+            function openHeroModal() {
+                if (!heroModal) return;
+                heroModal.classList.add('active');
+                heroModal.setAttribute('aria-hidden', 'false');
+            }
+
+            function closeHeroModal() {
+                if (!heroModal) return;
+                heroModal.classList.remove('active');
+                heroModal.setAttribute('aria-hidden', 'true');
+            }
+
+            if (headerHero) {
+                headerHero.addEventListener('click', openHeroModal);
+            }
+
+            if (heroModalClose) {
+                heroModalClose.addEventListener('click', closeHeroModal);
+            }
+
+            if (heroModalStart) {
+                heroModalStart.addEventListener('click', function () {
+                    closeHeroModal();
+                    const firstInput = document.getElementById('originalCapacity');
+                    if (firstInput) firstInput.focus();
+                });
+            }
+
+            if (heroModal) {
+                heroModal.addEventListener('click', function (e) {
+                    if (e.target === heroModal) closeHeroModal();
                 });
             }
         });
