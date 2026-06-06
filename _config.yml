@@ -1,7 +1,7 @@
 # 叫 Jekyll 忽略唔使處理嘅資料夾同檔案
 exclude:
   - node_modules
-  - "ev-re/node_modules"
+  - "evkeeper/node_modules"
   - Gemfile
   - Gemfile.lock
   - .github
