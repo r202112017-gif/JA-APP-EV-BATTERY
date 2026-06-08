@@ -572,7 +572,7 @@ class MarketplaceSystem {
 
     showPrototypeContactNotice(channel) {
         const label = channel === 'whatsapp' ? 'WhatsApp' : 'Email';
-        alert(`此為原型示範：${label} 聯絡功能尚未連接真實服務。`);
+        alert(`Prototype：${label} 聯絡功能尚未連接真實服務。`);
     }
 //             <p class="contact-proto-note">原型示範 — 聯絡方式尚未連接外部服務</p>
 
@@ -720,7 +720,7 @@ class MarketplaceSystem {
         this.save();
         document.getElementById('inquiryModal').classList.add('hidden');
         this.renderMySection();
-        alert('詢價已送出！賣家可於「收到的詢價」查看（本機模擬）。');
+        alert('詢價已送出！');
     }
 
     switchMyTab(tab) {
