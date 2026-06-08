@@ -571,16 +571,15 @@ class MarketplaceSystem {
     }
 
     showPrototypeContactNotice(channel) {
-        const label = channel === 'whatsapp' ? 'WhatsApp' : 'Email';
-        alert(`Prototype：${label} 聯絡功能尚未連接真實服務。`);
+        const label = channel === 'whatsapp' ? 'WhatsApp' : '電郵';
+        alert(`原型示範：${label} 聯絡功能尚未連接真實服務。`);
     }
-//             <p class="contact-proto-note">原型示範 — 聯絡方式尚未連接外部服務</p>
 
     renderContactLinks() {
         return `
             <div class="contact-links">
                 <button type="button" class="contact-link whatsapp contact-proto" data-channel="whatsapp">WhatsApp</button>
-                <button type="button" class="contact-link email contact-proto" data-channel="email">Email</button>
+                <button type="button" class="contact-link email contact-proto" data-channel="email">電郵</button>
             </div>
         `;
     }
