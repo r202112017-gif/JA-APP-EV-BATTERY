@@ -21,33 +21,184 @@
 
     <header class="hero">
         <h1>Selling and Trading platform</h1>
-        <p>在 EVkeeper 平台上發佈或搜尋汽車零件、電池、回收資源與二手交易機會，一站式連接買家與賣家。</p>
+        <p>汽車零件二手市集與電動車電池交易平台。電池分為「購買」與「回收／棄置」兩大類，助車主購入合規電池或妥善處理廢棄電池。</p>
     </header>
 
-    <section class="features">
-        <div class="card">
-            <h3>電池買賣</h3>
-            <p>提供電動車電池、模組與回收電池的交易訊息，讓買賣雙方快速配對。</p>
+    <section class="marketplace-section">
+        <div class="marketplace-tabs">
+            <button class="marketplace-tab active" data-category="parts">汽車零件</button>
+            <button class="marketplace-tab" data-category="battery">電動車電池</button>
         </div>
-        <div class="card">
-            <h3>零件交換</h3>
-            <p>支援車用電源模組、控制器與充電設備等零件的商品展示與詢價。</p>
+
+        <div id="batterySectionWrapper" class="battery-section-wrapper hidden">
+            <div class="battery-section-tabs">
+                <button class="battery-section-tab active" data-battery-section="buy">購買</button>
+                <button class="battery-section-tab" data-battery-section="dispose">回收／棄置</button>
+            </div>
+            <p id="batterySectionDesc" class="battery-section-desc"></p>
         </div>
-        <div class="card">
-            <h3>合作網絡</h3>
-            <p>連接回收商、維修站與車主社群，共創循環經濟生態。</p>
+
+        <div class="marketplace-toolbar">
+            <input type="search" id="marketplaceSearch" class="marketplace-search" placeholder="搜尋商品、車型、地區..." />
+            <select id="marketplaceSort" class="marketplace-sort">
+                <option value="newest">最新發佈</option>
+                <option value="price-asc">價格：低至高</option>
+                <option value="price-desc">價格：高至低</option>
+            </select>
+            <button id="postListingBtn" class="btn-primary">發佈商品</button>
+        </div>
+
+        <div id="subcategoryFilters" class="subcategory-filters"></div>
+
+        <div id="listingGrid" class="listing-grid"></div>
+    </section>
+
+    <section class="my-marketplace-section">
+        <div class="card full-width">
+            <h2>我的市集</h2>
+            <div class="my-marketplace-tabs">
+                <button class="my-marketplace-tab active" data-my-tab="listings">我發佈的商品</button>
+                <button class="my-marketplace-tab" data-my-tab="sent">我送出的詢價</button>
+                <button class="my-marketplace-tab" data-my-tab="received">收到的詢價</button>
+            </div>
+            <div class="my-marketplace-panel" data-my-panel="listings">
+                <div id="myListingsList" class="inquiry-list"></div>
+            </div>
+            <div class="my-marketplace-panel hidden" data-my-panel="sent">
+                <div id="sentInquiriesList" class="inquiry-list"></div>
+            </div>
+            <div class="my-marketplace-panel hidden" data-my-panel="received">
+                <div id="receivedInquiriesList" class="inquiry-list"></div>
+            </div>
         </div>
     </section>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const toggle = document.querySelector('.nav-toggle');
-            const menu = document.querySelector('.nav-links');
-            if (toggle && menu) {
-                toggle.addEventListener('click', function () {
-                    menu.classList.toggle('open');
-                });
-            }
-        });
-    </script>
+
+    <!-- Listing Detail Modal -->
+    <div id="listingDetailModal" class="modal hidden">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2>商品詳情</h2>
+                <button class="close-btn" data-close-modal>&times;</button>
+            </div>
+            <div class="modal-body" id="detailModalBody"></div>
+        </div>
+    </div>
+
+    <!-- Post Listing Modal -->
+    <div id="postListingModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>發佈商品 — <span id="postCategoryLabel">汽車零件</span></h2>
+                <button class="close-btn" data-close-modal>&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="postListingForm" class="post-form">
+                    <input type="hidden" id="postCategory" value="parts" />
+                    <div class="form-grid">
+                        <label class="form-group">
+                            <span>子分類</span>
+                            <select id="postSubcategory" required></select>
+                        </label>
+                        <label class="form-group">
+                            <span>標題</span>
+                            <input type="text" id="postTitle" required placeholder="例如：Tesla Model 3 充電模組" />
+                        </label>
+                        <label class="form-group full-width">
+                            <span>描述</span>
+                            <textarea id="postDescription" rows="3" required placeholder="商品狀況、適用車型、交易備註..."></textarea>
+                        </label>
+                        <label class="form-group">
+                            <span id="postPriceLabel">價格 (HKD)</span>
+                            <input type="number" id="postPrice" min="0" step="1" placeholder="0 = 洽詢（僅回收服務）" />
+                        </label>
+                        <label class="form-group">
+                            <span>地區</span>
+                            <input type="text" id="postLocation" required placeholder="例如：九龍 觀塘" />
+                        </label>
+                        <label class="form-group">
+                            <span>適用車型</span>
+                            <input type="text" id="postCompatibleModel" placeholder="例如：Tesla Model 3" />
+                        </label>
+                        <label class="form-group">
+                            <span>賣家名稱</span>
+                            <input type="text" id="postSellerName" required placeholder="你的名字或店名" />
+                        </label>
+                        <label class="form-group" id="partsConditionField">
+                            <span>成色</span>
+                            <select id="postCondition">
+                                <option value="new">全新</option>
+                                <option value="like-new">九成新</option>
+                                <option value="refurbished">維修翻新</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div id="batteryFields" class="form-grid hidden">
+                        <label class="form-group">
+                            <span>賣家類型</span>
+                            <select id="postSellerType">
+                                <option value="recycler">回收商</option>
+                                <option value="repair">維修站</option>
+                                <option value="private">私人車主</option>
+                            </select>
+                        </label>
+                        <label class="form-group">
+                            <span>認證狀態</span>
+                            <select id="postCertification">
+                                <option value="epd">環保署認可</option>
+                                <option value="repair">維修站檢測</option>
+                                <option value="none">未認證</option>
+                            </select>
+                        </label>
+                        <label class="form-group">
+                            <span>容量 (kWh)</span>
+                            <input type="number" id="postCapacity" min="0" step="0.1" placeholder="選填" />
+                        </label>
+                        <label class="form-group">
+                            <span>SOH (%)</span>
+                            <input type="number" id="postSoh" min="0" max="100" step="1" placeholder="選填" />
+                        </label>
+                    </div>
+                    <p class="contact-proto-note form-proto-note">原型示範：發佈商品不收集真實聯絡方式，詳情頁保留 WhatsApp／Email 示範按鈕。</p>
+                    <div class="button-group">
+                        <button type="submit" class="btn-primary">確認發佈</button>
+                        <button type="button" class="btn-secondary" data-close-modal>取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inquiry Modal -->
+    <div id="inquiryModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>站內詢價</h2>
+                <button class="close-btn" data-close-modal>&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="inquiry-target">商品：<strong id="inquiryListingTitle"></strong></p>
+                <form id="inquiryForm">
+                    <label class="form-group">
+                        <span>你的姓名</span>
+                        <input type="text" id="inquiryBuyerName" required placeholder="買家姓名" />
+                    </label>
+                    <label class="form-group">
+                        <span>聯絡方式</span>
+                        <input type="text" id="inquiryBuyerContact" required placeholder="WhatsApp / Email" />
+                    </label>
+                    <label class="form-group">
+                        <span>詢價內容</span>
+                        <textarea id="inquiryMessage" rows="4" required placeholder="請描述你的需求、議價或預約時間..."></textarea>
+                    </label>
+                    <div class="button-group">
+                        <button type="submit" class="btn-primary">送出詢價</button>
+                        <button type="button" class="btn-secondary" data-close-modal>取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/marketplace.js"></script>
 </body>
 </html>
