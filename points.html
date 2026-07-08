@@ -198,16 +198,57 @@
                     recyclingCount: 0,
                     activities: [],
                     co2History: this.initializeCO2History()
+                    //The below is new
+                    dailyTracker: {
+                        date: new Data().toLocaleDateString('zh-HK'),
+                        earnedPoints: 0
+                    //The above is new
                 };
                 this.rewardsList = this.initializeRewards();
                 this.init();
             }
 
             init() {
+                this.checkDailyReset();        //This line is new
                 this.updateDashboard();
                 this.setupEventListeners();
+                this.startCountdownTimer();    //This line is new
             }
 
+            //The below is new
+            checkDailyReset() {
+                const today = new Date().toLocaleDateString('zh-HK');
+                if (this.points.dailyTracker.date!==today) {
+                    this.points.dailyTracker.date= today;
+                    this.ppoints.dailyTracker.earnedPoints=0;
+                    this.save();
+                }
+            }
+            
+            startCountdownTimer() {
+                setInterval(() => {
+                    const diff = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1)-new Date());
+                    const h = Math.floor((diff%(1000*60*60*24))/(1000*60*60));
+                    const m = Math.floor((diff%(1000*60*60))/(1000*60));
+                    const s = Math.floor((diff%(1000*60))/(1000*60));
+                    
+                    //idk the below need add or not
+                    const formattedTime = '${h.toString().padStart(2,'0')}:${m.toString().padStart(2.'0')}:${s.toString().padStart(2,'0')}';
+                    const timerElement = document.getElementById('countdownTimer');
+                    if (timerElement) {
+                        timerElement.textContent = '距離重置: ${formattedTime}';
+                    }
+                    //idk the above need add or not
+                    
+                    if (h===0 && m===0 && s===0) {
+                        this.checkDailyReset();
+                        this.updateDashboard();
+                    }
+                },1000);
+            }
+
+            //The above is new
+            
             initializeCO2History() {
                 const history = [];
                 for (let i = 6; i >= 0; i--) {
@@ -254,6 +295,13 @@
                 document.getElementById('totalCO2Display').textContent = (this.points.co2 / 1000).toFixed(2) + ' 噸';
                 document.getElementById('chargingCountDisplay').textContent = this.points.chargingCount;
                 document.getElementById('recyclingCountDisplay').textContent = this.points.recyclingCount;
+
+                //The below is new
+                const dailyDisplay = document.getElementById('dailyPointsDisplay');
+                if (dailyDisplay) {
+                    dailyDisplay.textContent = this.points.dailyTracker.earnedPoints;
+                    } //The above is new
+                }
             }
 
             save() {
