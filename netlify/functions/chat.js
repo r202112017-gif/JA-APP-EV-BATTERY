@@ -1,4 +1,5 @@
-import OpenAI from 'openai';
+// 將 import 改為 require
+const { OpenAI } = require('openai');
 
 export const handler = async (event, context) => {
   // CORS 預檢請求處理
