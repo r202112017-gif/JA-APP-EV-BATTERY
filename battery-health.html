@@ -439,7 +439,8 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
             try {
-const response = await fetch('/.netlify/functions/chat', {  // ✅ 改成這樣                    method: 'POST',
+const response = await fetch('/.netlify/functions/chat', {  // ✅ 改成這樣                  
+  method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message, conversationHistory })
                 });
