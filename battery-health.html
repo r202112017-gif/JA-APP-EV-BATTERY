@@ -437,31 +437,12 @@
             loadingMsg.innerHTML = '<p class="typing-indicator">●●●</p>';
             chatMessages.appendChild(loadingMsg);
             chatMessages.scrollTop = chatMessages.scrollHeight;
-
-            try {
-                async function sendMessage() {
-            const message = chatInput.value.trim();
-            if (!message) return;
-
-            // 建立用戶的訊息氣泡
-            const userMsg = document.createElement('div');
-            userMsg.className = 'message user-message';
-            userMsg.innerHTML = `<p>${escapeHtml(message)}</p>`;
-            chatMessages.appendChild(userMsg);
-            chatInput.value = '';
-
-            // 建立載入中動畫
-            const loadingMsg = document.createElement('div');
-            loadingMsg.className = 'message ai-message loading';
-            loadingMsg.innerHTML = `<p>EVkeeper 正在思考中...</p>`;
-            chatMessages.appendChild(loadingMsg);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-
-            try {
-                // 1. 正確的 Netlify 路由
+try {
+                // 1. 修正點：更改為 Netlify 正確的 Function 路由
                 const response = await fetch('/.netlify/functions/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    // 2. 修正點：後端接收的變數名叫 history，所以要把 conversationHistory 轉為 history 傳過去
                     body: JSON.stringify({ message, history: conversationHistory })
                 });
 
@@ -470,23 +451,26 @@
                     throw new Error(errorData.error || `HTTP 錯誤：${response.status}`);
                 }
 
-                // 2. 解析完整 JSON 回應
+                // 3. 修正點：因為後端不是 Stream，直接讀取整個 JSON
                 const data = await response.json();
 
-                // 移除載入中動畫
+                // 移除載入中的動畫氣泡
                 loadingMsg.remove();
                 
                 // 建立 AI 的對話氣泡
                 const aiMsg = document.createElement('div');
                 aiMsg.className = 'message ai-message';
                 
+                // 4. 修正點：後端回傳的欄位是 data.reply，將裡面的換行符轉為網頁換行
                 const fullText = data.reply;
                 aiMsg.innerHTML = `<p>${escapeHtml(fullText).replace(/\n/g, '<br>')}</p>`;
+                
                 chatMessages.appendChild(aiMsg);
                 
+                // 滾動到最底部
                 chatMessages.scrollTop = chatMessages.scrollHeight;
 
-                // 紀錄對話記憶
+                // 紀錄進前端的對話歷史，維持多輪對話記憶
                 conversationHistory.push({ role: 'assistant', content: fullText });
                 
             } catch (error) {
@@ -497,41 +481,6 @@
                 chatMessages.appendChild(errorMsg);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
-        } // 👈 確保這個綁定 sendMessage 的大括號存在
-
-        // 3. 事件監聽器設定
-        chatSend.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
-
-        // 4. 工具函數
-        function escapeHtml(text) {
-            const el = document.createElement('div');
-            el.textContent = text;
-            return el.innerHTML;
-        }  
-            } catch (error) {
-                loadingMsg.remove();
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'message ai-message error';
-                errorMsg.innerHTML = `<p>❌ 錯誤：${escapeHtml(error.message)}</p>`;
-                chatMessages.appendChild(errorMsg);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-        }
-
-        chatSend.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
-
-        function escapeHtml(text) {
-            const el = document.createElement('div');
-            el.textContent = text;
-            return el.innerHTML;
-        }
-
         // ===== AI assistant wiring =====
         function appendAiMessage(type, html) {
             const box = document.getElementById('ai-chat-history');
@@ -1086,14 +1035,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (e.target === heroModal) closeHeroModal();
                 });
             }
-
-            // 💡 請確保這段放在檔案的最外層（最底部），等所有人都能呼叫到它
-function escapeHtml(text) {
-    if (!text) return '';
-    const el = document.createElement('div');
-    el.textContent = text;
-    return el.innerHTML;
-}
         });
     </script>
 </body>
