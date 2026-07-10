@@ -1,8 +1,7 @@
-// 將 import 改為 require
-const { OpenAI } = require('openai');
+// netlify/functions/chat.js
 
 export const handler = async (event, context) => {
-  // CORS 預檢請求處理
+  // 1. CORS 預檢請求處理
   if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
@@ -22,57 +21,78 @@ export const handler = async (event, context) => {
     };
   }
 
+  // 2. 讀取 API Key
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify({ error: "❌ Netlify 後端找不到 OPENROUTER_API_KEY！" }),
+    };
+  }
+
   try {
+    // 3. 解析前端傳來的資料
     const { history, message } = JSON.parse(event.body);
-
-    // 1. 初始化 OpenAI 實例，但將網址指向 OpenRouter 的端點
-    // Netlify 後台的變數名記得要改成 OPENROUTER_API_KEY
-    const openai = new OpenAI({
-      baseURL: "https://openrouter.ai/api/v1",
-      apiKey: process.env.OPENROUTER_API_KEY,
-    });
-
-    // 2. OpenRouter 使用標準 OpenAI 格式
-    // 佢嘅 role 直接支援 'user' 同 'assistant'，你連轉換 role 嘅時間都慳返！
-    const formattedMessages = history.map(msg => ({
+    const safeHistory = history || [];
+    
+    // 轉換歷史紀錄格式
+    let formattedMessages = safeHistory.map(msg => ({
       role: msg.role, 
-      content: msg.parts[0].text // 提取文字內容
+      content: msg.parts && msg.parts[0] ? msg.parts[0].text : (msg.content || "")
     }));
 
     // 塞入最新問題
-    if (formattedMessages.length === 0 || formattedMessages[formattedMessages.length - 1].content !== message) {
-      formattedMessages.push({ role: 'user', content: message });
+    if (message) {
+      if (formattedMessages.length === 0 || formattedMessages[formattedMessages.length - 1].content !== message) {
+        formattedMessages.push({ role: 'user', content: message });
+      }
     }
 
-    // 3. 喺陣列最前排塞入 System Prompt（人設限制）
+    // 塞入 System Prompt (EVkeeper 專家口吻)
     formattedMessages.unshift({
       role: 'system',
       content: "你係 EVkeeper 智能 AI 診斷專家。請完全使用香港廣東話、口語化且極具專業車主口吻來解答有關電動車充電、SOH（健康度）的問題。"
     });
 
-    // 4. 呼叫 OpenRouter 嘅免費模型
-    // 你可以隨時換做其他 OpenRouter 上的免費模型，例如 "deepseek/deepseek-chat:free" 
-    const completion = await openai.chat.completions.create({
-      model: "tencent/hy3:free",
-      messages: formattedMessages,
+    // 4. 用原生 fetch 呼叫 OpenRouter 
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: "tencent/hy3:free", // 免費模型
+        messages: formattedMessages,
+      })
     });
 
-    // 5. 回傳答案給前端
+    const resData = await response.json();
+
+    if (!response.ok) {
+      return {
+        statusCode: response.status,
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        body: JSON.stringify({ error: "❌ OpenRouter 拒絕請求", details: resData }),
+      };
+    }
+
+    // 5. 成功回傳答案給前端
     return {
       statusCode: 200,
       headers: {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
       },
-      body: JSON.stringify({ reply: completion.choices[0].message.content }),
+      body: JSON.stringify({ reply: resData.choices[0].message.content }),
     };
 
   } catch (error) {
-    console.error("OpenRouter 中轉出錯:", error);
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ error: "OpenRouter 思考途中發生故障： " + error.message }),
+      body: JSON.stringify({ error: "💥 chat 執行失敗: " + error.message }),
     };
   }
 };
