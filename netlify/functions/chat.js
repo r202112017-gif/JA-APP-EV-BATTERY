@@ -1,6 +1,7 @@
 // netlify/functions/chat.js
+const fetch = require('node-fetch'); // 確保相容舊版 Node 環境（如果 Netlify 內建未啟用全域 fetch）
 
-export const handler = async (event, context) => {
+exports.handler = async (event, context) => {
   // 1. 處理 CORS 預檢請求
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -26,7 +27,7 @@ export const handler = async (event, context) => {
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ error: "❌ Netlify 後端找不到 OPENROUTER_API_KEY！" }),
+      body: `data: {"text": "❌ Netlify 後端找不到 OPENROUTER_API_KEY！"}\n\n`
     };
   }
 
@@ -52,7 +53,7 @@ export const handler = async (event, context) => {
       content: "你係 EVkeeper 智能 AI 診斷專家。請完全使用香港廣東話、口語化且極具專業車主口吻來解答有關電動車充電、SOH（健康度）的問題。"
     });
 
-    // 2. 呼叫 OpenRouter 並開啟 stream: true
+    // 2. 呼叫 OpenRouter 并開啟 stream: true
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -62,7 +63,7 @@ export const handler = async (event, context) => {
       body: JSON.stringify({
         model: "tencent/hy3:free",
         messages: formattedMessages,
-        stream: true // 👈 ⚠️ 核心：開啟串流模式！
+        stream: true
       })
     });
 
@@ -75,40 +76,35 @@ export const handler = async (event, context) => {
       };
     }
 
-    // 3. 將 OpenRouter 的打字機流（SSE）轉接，精準餵給前端的 while 循環
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
+    // 3. 處理流式輸出（相容 Node.js 傳輸層）
     let streamBody = '';
+    
+    // 如果是 node-fetch 的 response.body，它是一個 Node Stream，我們可以用 text() 或者直接處理
+    // 為了安全並對齊你的前端 while 循環，我們將串流資料全部撈出並打包成前端要的格式
+    const fullChunks = await response.text();
+    const lines = fullChunks.split('\n');
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n');
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const rawStr = line.substring(6).trim();
-          if (rawStr === '[DONE]') continue;
-          
-          try {
-            const parsed = JSON.parse(rawStr);
-            const content = parsed.choices?.[0]?.delta?.content || "";
-            if (content) {
-              // 轉換成前端期待的格式：data: {"text": "..."}
-              streamBody += `data: ${JSON.stringify({ text: content })}\n\n`;
-            }
-          } catch (e) {}
-        }
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const rawStr = line.substring(6).trim();
+        if (rawStr === '[DONE]') continue;
+        
+        try {
+          const parsed = JSON.parse(rawStr);
+          const content = parsed.choices?.[0]?.delta?.content || "";
+          if (content) {
+            // 轉換成你前端正在 while 循環裡死等着的格式：data: {"text": "..."}
+            streamBody += `data: ${JSON.stringify({ text: content })}\n\n`;
+          }
+        } catch (e) {}
       }
     }
 
-    // 4. 回傳滿足前端 Server-Sent Events 格式的串流文本
+    // 4. 回傳滿足前端的串流文本
     return {
       statusCode: 200,
       headers: {
-        "Content-Type": "text/event-stream", // 👈 宣告這是打字機串流
+        "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
         "Access-Control-Allow-Origin": "*",
