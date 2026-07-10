@@ -52,7 +52,7 @@ export const handler = async (event, context) => {
     // 4. 呼叫 OpenRouter 嘅免費模型
     // 你可以隨時換做其他 OpenRouter 上的免費模型，例如 "deepseek/deepseek-chat:free" 
     const completion = await openai.chat.completions.create({
-      model: "meta-llama/llama-3-8b-instruct:free",
+      model: "tencent/hy3:free",
       messages: formattedMessages,
     });
 
