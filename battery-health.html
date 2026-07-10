@@ -439,56 +439,41 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
             try {
-const response = await fetch('/.netlify/functions/chat', {  // ✅ 改成這樣                  
-  method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message, conversationHistory })
-                });
+        const response = await fetch('/.netlify/functions/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, history: conversationHistory })
+        });
 
-                if (!response.body) throw new Error('No response body');
-
-                loadingMsg.remove();
-                const aiMsg = document.createElement('div');
-                aiMsg.className = 'message ai-message';
-                chatMessages.appendChild(aiMsg); // 修正：先 append 確保 DOM 存在
-                
-                let fullText = '';
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const json = JSON.parse(line.substring(6));
-                                if (json.done) break;
-                                if (json.text) {
-                                    fullText += json.text;
-                                    // 修正點 2: Stream 輸出時，將換行符轉為 <br>，避免破壞結構或格式
-                                    aiMsg.innerHTML = `<p>${escapeHtml(fullText).replace(/\n/g, '<br>')}</p>`;
-                                }
-                            } catch (e) {}
-                        }
-                    }
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
-
-                conversationHistory.push({ role: 'assistant', content: fullText });
-                
-            } catch (error) {
-                loadingMsg.remove();
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'message ai-message error';
-                errorMsg.innerHTML = `<p>❌ 錯誤：${escapeHtml(error.message)}</p>`;
-                chatMessages.appendChild(errorMsg);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `HTTP 錯誤：${response.status}`);
         }
+
+        const data = await response.json();
+        loadingMsg.remove();
+        
+        const aiMsg = document.createElement('div');
+        aiMsg.className = 'message ai-message';
+        
+        const fullText = data.reply || "未收到回覆";
+        aiMsg.innerHTML = `<p>${escapeHtml(fullText).replace(/\n/g, '<br>')}</p>`;
+        chatMessages.appendChild(aiMsg);
+        
+        conversationHistory.push({ role: 'assistant', content: fullText });
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    } catch (error) {
+        loadingMsg.remove();
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'message ai-message error';
+        errorMsg.innerHTML = `<p>❌ 錯誤：${escapeHtml(error.message)}</p>`;
+        chatMessages.appendChild(errorMsg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    // ==============================================================================
+
+}
 
         chatSend.addEventListener('click', sendMessage);
         chatInput.addEventListener('keypress', (e) => {
