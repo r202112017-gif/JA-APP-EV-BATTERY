@@ -1,7 +1,7 @@
 // netlify/functions/chat.js
 
 export const handler = async (event, context) => {
-  // 1. CORS 預檢請求處理
+  // 1. 處理 CORS 預檢請求
   if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
@@ -21,7 +21,6 @@ export const handler = async (event, context) => {
     };
   }
 
-  // 2. 讀取 API Key
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     return {
@@ -32,21 +31,19 @@ export const handler = async (event, context) => {
   }
 
   try {
-    // 3. 解析前端傳來的資料
-    const { history, message } = JSON.parse(event.body);
-    const safeHistory = history || [];
+    // 解析前端傳來的資料
+    const { message, conversationHistory } = JSON.parse(event.body);
+    const rawHistory = conversationHistory || [];
     
     // 轉換歷史紀錄格式
-    let formattedMessages = safeHistory.map(msg => ({
+    let formattedMessages = rawHistory.map(msg => ({
       role: msg.role, 
-      content: msg.parts && msg.parts[0] ? msg.parts[0].text : (msg.content || "")
+      content: msg.content
     }));
 
     // 塞入最新問題
     if (message) {
-      if (formattedMessages.length === 0 || formattedMessages[formattedMessages.length - 1].content !== message) {
-        formattedMessages.push({ role: 'user', content: message });
-      }
+      formattedMessages.push({ role: 'user', content: message });
     }
 
     // 塞入 System Prompt (EVkeeper 專家口吻)
@@ -55,7 +52,7 @@ export const handler = async (event, context) => {
       content: "你係 EVkeeper 智能 AI 診斷專家。請完全使用香港廣東話、口語化且極具專業車主口吻來解答有關電動車充電、SOH（健康度）的問題。"
     });
 
-    // 4. 用原生 fetch 呼叫 OpenRouter 
+    // 2. 呼叫 OpenRouter 並開啟 stream: true
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -63,36 +60,67 @@ export const handler = async (event, context) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "tencent/hy3:free", // 免費模型
+        model: "tencent/hy3:free",
         messages: formattedMessages,
+        stream: true // 👈 ⚠️ 核心：開啟串流模式！
       })
     });
 
-    const resData = await response.json();
-
     if (!response.ok) {
+      const errRes = await response.text();
       return {
         statusCode: response.status,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-        body: JSON.stringify({ error: "❌ OpenRouter 拒絕請求", details: resData }),
+        headers: { "Access-Control-Allow-Origin": "*" },
+        body: `data: {"text": "❌ OpenRouter 錯誤: ${errRes}"}\n\n`
       };
     }
 
-    // 5. 成功回傳答案給前端
+    // 3. 將 OpenRouter 的打字機流（SSE）轉接，精準餵給前端的 while 循環
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let streamBody = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const rawStr = line.substring(6).trim();
+          if (rawStr === '[DONE]') continue;
+          
+          try {
+            const parsed = JSON.parse(rawStr);
+            const content = parsed.choices?.[0]?.delta?.content || "";
+            if (content) {
+              // 轉換成前端期待的格式：data: {"text": "..."}
+              streamBody += `data: ${JSON.stringify({ text: content })}\n\n`;
+            }
+          } catch (e) {}
+        }
+      }
+    }
+
+    // 4. 回傳滿足前端 Server-Sent Events 格式的串流文本
     return {
       statusCode: 200,
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "text/event-stream", // 👈 宣告這是打字機串流
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
         "Access-Control-Allow-Origin": "*",
       },
-      body: JSON.stringify({ reply: resData.choices[0].message.content }),
+      body: streamBody
     };
 
   } catch (error) {
     return {
       statusCode: 500,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ error: "💥 chat 執行失敗: " + error.message }),
+      headers: { "Access-Control-Allow-Origin": "*" },
+      body: `data: {"text": "💥 後端發生崩潰: ${error.message}"}\n\n`
     };
   }
 };
