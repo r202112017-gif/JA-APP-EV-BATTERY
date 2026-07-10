@@ -437,47 +437,40 @@
             loadingMsg.innerHTML = '<p class="typing-indicator">●●●</p>';
             chatMessages.appendChild(loadingMsg);
             chatMessages.scrollTop = chatMessages.scrollHeight;
-
-            try {
-                const response = await fetch('/api/chat', {
+try {
+                // 1. 修正點：更改為 Netlify 正確的 Function 路由
+                const response = await fetch('/.netlify/functions/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message, conversationHistory })
+                    // 2. 修正點：後端接收的變數名叫 history，所以要把 conversationHistory 轉為 history 傳過去
+                    body: JSON.stringify({ message, history: conversationHistory })
                 });
 
-                if (!response.body) throw new Error('No response body');
-
-                loadingMsg.remove();
-                const aiMsg = document.createElement('div');
-                aiMsg.className = 'message ai-message';
-                chatMessages.appendChild(aiMsg); // 修正：先 append 確保 DOM 存在
-                
-                let fullText = '';
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const json = JSON.parse(line.substring(6));
-                                if (json.done) break;
-                                if (json.text) {
-                                    fullText += json.text;
-                                    // 修正點 2: Stream 輸出時，將換行符轉為 <br>，避免破壞結構或格式
-                                    aiMsg.innerHTML = `<p>${escapeHtml(fullText).replace(/\n/g, '<br>')}</p>`;
-                                }
-                            } catch (e) {}
-                        }
-                    }
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP 錯誤：${response.status}`);
                 }
 
+                // 3. 修正點：因為後端不是 Stream，直接讀取整個 JSON
+                const data = await response.json();
+
+                // 移除載入中的動畫氣泡
+                loadingMsg.remove();
+                
+                // 建立 AI 的對話氣泡
+                const aiMsg = document.createElement('div');
+                aiMsg.className = 'message ai-message';
+                
+                // 4. 修正點：後端回傳的欄位是 data.reply，將裡面的換行符轉為網頁換行
+                const fullText = data.reply;
+                aiMsg.innerHTML = `<p>${escapeHtml(fullText).replace(/\n/g, '<br>')}</p>`;
+                
+                chatMessages.appendChild(aiMsg);
+                
+                // 滾動到最底部
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                // 紀錄進前端的對話歷史，維持多輪對話記憶
                 conversationHistory.push({ role: 'assistant', content: fullText });
                 
             } catch (error) {
@@ -488,19 +481,6 @@
                 chatMessages.appendChild(errorMsg);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
-        }
-
-        chatSend.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
-
-        function escapeHtml(text) {
-            const el = document.createElement('div');
-            el.textContent = text;
-            return el.innerHTML;
-        }
-
         // ===== AI assistant wiring =====
         function appendAiMessage(type, html) {
             const box = document.getElementById('ai-chat-history');
