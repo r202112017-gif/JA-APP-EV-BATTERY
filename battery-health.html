@@ -1086,6 +1086,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (e.target === heroModal) closeHeroModal();
                 });
             }
+
+            // 💡 請確保這段放在檔案的最外層（最底部），等所有人都能呼叫到它
+function escapeHtml(text) {
+    if (!text) return '';
+    const el = document.createElement('div');
+    el.textContent = text;
+    return el.innerHTML;
+}
         });
     </script>
 </body>
